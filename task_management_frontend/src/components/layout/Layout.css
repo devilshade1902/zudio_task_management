@@ -1,0 +1,20 @@
+/* src/components/Layout/Layout.css */
+.layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  margin-top: 60px;
+  padding: 20px;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  transition: all 0.3s ease-in-out;
+}
+
+.main-content.shifted {
+  margin-left: 240px;
+  width: calc(100% - 240px);
+}
