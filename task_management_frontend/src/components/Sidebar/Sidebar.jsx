@@ -14,8 +14,8 @@ const Sidebar = ({ isOpen, toggle }) => {
         <h2>Sidebar</h2>
         <ul className='sidebar-menu'>
           <Link to='/dashboard' style={{ textDecoration: 'none', color: 'white' }}><li>Home</li></Link>
-          <Link to='/tasks' style={{ textDecoration: 'none', color: 'white' }}><li>Assign Tasks</li></Link>
-          <li>View Tasks</li>
+          <Link to="/dashboard/assign-tasks" style={{ textDecoration: 'none', color: 'white' }}><li>Assign Tasks</li></Link>
+          <Link to="/dashboard/view-tasks" style={{ textDecoration: 'none', color: 'white' }}><li>View Tasks</li></Link>
           <li>Users</li>
         </ul>
       </div>

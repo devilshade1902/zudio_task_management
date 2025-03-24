@@ -1,0 +1,77 @@
+/* src/pages/Tasks/ViewTasks.css */
+
+.view-tasks-container {
+    padding: 24px;
+    background-color: #f4f6f9;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .view-tasks-container h2 {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #333;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  /* Grid Layout for Tasks */
+  .tasks-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* Always 2 columns */
+    gap: 20px;
+    max-width: 800px; /* Ensure the grid is not too wide */
+    width: 100%;
+  }
+  
+  /* Task Cards */
+  .card {
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+    background: #ffffff;
+    padding: 16px;
+    text-align: left;
+  }
+  
+  .card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.12);
+  }
+  
+  .card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  
+  .card-text {
+    font-size: 0.95rem;
+    color: #333;
+  }
+  
+  /* Priority Colors with Lighter Backgrounds */
+  .high-priority {
+    border-left: 5px solid #e74c3c;
+    background: #ffdddd;
+  }
+  
+  .medium-priority {
+    border-left: 5px solid #f39c12;
+    background: #fff4d1;
+  }
+  
+  .low-priority {
+    border-left: 5px solid #2ecc71;
+    background: #dfffe1;
+  }
+  
+  /* Responsive for Mobile: 1 Card Per Row */
+  @media (max-width: 768px) {
+    .tasks-grid {
+      grid-template-columns: 1fr; /* Single column layout on smaller screens */
+    }
+  }
+  
