@@ -1,37 +1,82 @@
 /* src/pages/Dashboard/Dashboard.css */
-/* src/pages/Dashboard/Dashboard.css */
+
 .dashboard {
-  padding: 20px;
-  /* border: 1px solid black; */
+  padding: 24px;
+  background-color: #f4f6f9;
+  min-height: 100vh;
 }
 
-.dashboard h2{
-  position: relative;
-  left: 10px;
+.dashboard h2 {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  margin-bottom: 20px;
 }
 
 .card {
-  transition: transform 0.2s ease-in-out;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  background: #ffffff;
+  border: none;
 }
 
 .card:hover {
-  transform: translateY(-5px); /* Subtle lift effect on hover */
+  transform: translateY(-8px);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+}
+
+.card-body {
+  padding: 20px;
 }
 
 .card-title {
-  font-size: 1.25rem;
-  margin-bottom: 1rem;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 10px;
 }
 
 .card-text.display-6 {
-  font-size: 2.5rem;
+  font-size: 2.2rem;
   font-weight: bold;
+  color: #0c056d;
 }
 
+/* Progress Bar Styling */
 .progress {
-  border-radius: 10px;
+  height: 12px;
+  border-radius: 20px;
+  background-color: #e0e0e0;
+  overflow: hidden;
 }
 
 .progress-bar {
   font-weight: 600;
+  font-size: 0.9rem;
+  text-align: center;
+  border-radius: 20px;
+  transition: width 0.6s ease-in-out;
+}
+
+/* High Priority */
+.card.border-danger {
+  border-left: 5px solid #dc3545;
+  background: linear-gradient(135deg, #ff7675, #e74c3c);
+  color: white;
+}
+
+/* Medium Priority */
+.card.border-warning {
+  border-left: 5px solid #f39c12;
+  background: linear-gradient(135deg, #f39c12, #f1c40f);
+  color: white;
+}
+
+/* Low Priority */
+.card.border-success {
+  border-left: 5px solid #28a745;
+  background: linear-gradient(135deg, #2ecc71, #1abc9c);
+  color: white;
 }
