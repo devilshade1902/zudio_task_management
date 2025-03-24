@@ -8,7 +8,7 @@
   height: 100vh;
   background: linear-gradient(135deg, #1c1f26, #292e38);
   color: white;
-  padding: 20px;
+  padding: 30px 20px;
   transition: left 0.3s ease-in-out;
   box-shadow: 3px 0 10px rgba(0, 0, 0, 0.15);
   display: flex;
@@ -22,10 +22,10 @@
 }
 
 .sidebar h2 {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 600;
   text-align: center;
-  margin-bottom: 15px;
+  margin-bottom: 20px;
   color: #ffffff;
   letter-spacing: 0.8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
@@ -33,45 +33,74 @@
   width: 100%;
 }
 
+/* Sidebar List Centering */
 .sidebar ul {
   list-style: none;
   padding: 0;
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px; /* Even spacing between items */
 }
 
+/* Apply styles to <li> inside <Link> */
+.sidebar ul a {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  text-decoration: none;
+}
+
+/* Sidebar List Items */
 .sidebar ul li {
-  padding: 12px;
-  text-align: left;
-  font-size: 16px;
+  width: 85%; /* Consistent width for all items */
+  padding: 12px 0; /* Uniform padding */
+  font-size: 17px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 10px;
-  transition: background 0.2s ease-in-out;
-  border-radius: 6px;
+  justify-content: center;
+  gap: 12px; /* Spacing between icon and text */
+  border-radius: 8px;
   color: #ddd;
+  text-align: center;
+  transition: all 0.3s ease-in-out;
+  position: relative;
 }
 
-.sidebar ul li i {
-  font-size: 18px;
+/* Uniform Hover Effect */
+.sidebar ul li::before {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: #007bff;
+  border-radius: 8px;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.sidebar ul li:hover::before {
+  opacity: 1;
 }
 
 .sidebar ul li:hover {
-  background: #007bff;
   color: white;
 }
 
 /* Sidebar Toggle Button */
 .sidebar-toggle {
   position: fixed;
-  top: 15px;
-  left: 15px;
+  top: 20px;
+  left: 20px;
   background: #007bff;
   color: white;
   border: none;
-  padding: 10px;
+  padding: 12px;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 8px;
   transition: all 0.3s ease-in-out;
   box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
   z-index: 1100;
