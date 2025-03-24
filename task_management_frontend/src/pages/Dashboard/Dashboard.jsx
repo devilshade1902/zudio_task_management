@@ -1,6 +1,7 @@
 // src/pages/Dashboard/Dashboard.jsx
 import React from "react";
 import "./Dashboard.css";
+import ChatBox from "../../components/chatbox/Chatbox";
 
 const Dashboard = () => {
   const progressData = {
@@ -96,6 +97,7 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+      <ChatBox /> {/* Add Chatbox here */}
       {/* Add dummy content to force scrolling */}
       <div style={{ height: "100vh" }}></div>
     </div>
