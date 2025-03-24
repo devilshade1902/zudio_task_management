@@ -6,15 +6,15 @@ import ChatBox from "../../components/chatbox/Chatbox";
 const Dashboard = () => {
   const progressData = {
     totalTasks: 50,
-    completedTasks: 35,
-    inProgressTasks: 10,
-    pendingTasks: 5,
-    overdueTasks: 3,
-    highPriority: 8,
-    mediumPriority: 25,
-    lowPriority: 17,
+    completedTasks: 30,  // 30 tasks are fully completed
+    inProgressTasks: 12, // 12 tasks are ongoing
+    pendingTasks: 8,     // 8 tasks haven't started yet
+    overdueTasks: 5,     // 5 tasks from inProgress/pending are overdue
+    highPriority: 10,    
+    mediumPriority: 20,  
+    lowPriority: 20,    
   };
-
+  
   const completionPercentage = (progressData.completedTasks / progressData.totalTasks) * 100;
 
   return (
