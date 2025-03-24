@@ -1,21 +1,45 @@
 // src/pages/Dashboard/Dashboard.jsx
-import React from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import "./Dashboard.css";
 import ChatBox from "../../components/chatbox/Chatbox";
 
 const Dashboard = () => {
-  const progressData = {
-    totalTasks: 50,
-    completedTasks: 30,  // 30 tasks are fully completed
-    inProgressTasks: 12, // 12 tasks are ongoing
-    pendingTasks: 8,     // 8 tasks haven't started yet
-    overdueTasks: 5,     // 5 tasks from inProgress/pending are overdue
-    highPriority: 10,    
-    mediumPriority: 20,  
-    lowPriority: 20,    
+  const [progressData, setProgressData] = useState({
+    totalTasks: 0,
+    completedTasks: 0,
+    inProgressTasks: 0,
+    pendingTasks: 0,
+    overdueTasks: 0,
+    highPriority: 0,
+    mediumPriority: 0,
+    lowPriority: 0,
+  });
+
+  // Fetch tasks and compute stats
+  const fetchTasks = async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/api/tasks');
+      setProgressData({
+        totalTasks: response.data.totalTasks,
+        completedTasks: response.data.completedTasks,
+        inProgressTasks: response.data.inProgressTasks,
+        pendingTasks: response.data.pendingTasks,
+        overdueTasks: response.data.overdueTasks,
+        highPriority: response.data.highPriority,
+        mediumPriority: response.data.mediumPriority,
+        lowPriority: response.data.lowPriority,
+      });
+    } catch (err) {
+      console.error('Error fetching tasks:', err);
+    }
   };
-  
-  const completionPercentage = (progressData.completedTasks / progressData.totalTasks) * 100;
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const completionPercentage = (progressData.completedTasks / progressData.totalTasks) * 100 || 0;
 
   return (
     <div className="dashboard container mt-4">
@@ -97,8 +121,7 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
-      <ChatBox /> {/* Add Chatbox here */}
-      {/* Add dummy content to force scrolling */}
+      <ChatBox />
       <div style={{ height: "100vh" }}></div>
     </div>
   );

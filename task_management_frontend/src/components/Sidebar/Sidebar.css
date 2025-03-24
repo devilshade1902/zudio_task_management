@@ -44,7 +44,7 @@
   gap: 15px; /* Even spacing between items */
 }
 
-/* Apply styles to <li> inside <Link> */
+/* Apply styles to <li> inside <NavLink> */
 .sidebar ul a {
   width: 100%;
   display: flex;
@@ -90,10 +90,20 @@
   color: white;
 }
 
+/* Active Link Styling */
+.sidebar ul a.active li {
+  background: #007bff; /* Solid background for active state */
+  color: white; /* White text for active state */
+}
+
+.sidebar ul a.active li::before {
+  opacity: 0; /* Hide hover effect when active */
+}
+
 /* Sidebar Toggle Button */
 .sidebar-toggle {
   position: fixed;
-  top: 20px;
+  top: 15px;
   left: 20px;
   background: #007bff;
   color: white;

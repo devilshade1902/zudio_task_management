@@ -2,7 +2,7 @@
 import React from 'react';
 import { FiMenu, FiX } from "react-icons/fi";
 import "./Sidebar.css";
-import { Link } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 
 const Sidebar = ({ isOpen, toggle }) => {
   return (
@@ -13,9 +13,28 @@ const Sidebar = ({ isOpen, toggle }) => {
       <div className={`sidebar ${isOpen ? "open" : ""}`}>
         <h2>Sidebar</h2>
         <ul className='sidebar-menu'>
-          <Link to='/dashboard' style={{ textDecoration: 'none', color: 'white' }}><li>Home</li></Link>
-          <Link to="/dashboard/assign-tasks" style={{ textDecoration: 'none', color: 'white' }}><li>Assign Tasks</li></Link>
-          <Link to="/dashboard/view-tasks" style={{ textDecoration: 'none', color: 'white' }}><li>View Tasks</li></Link>
+          <NavLink
+            to="/dashboard"
+            end // Add this to ensure exact match
+            className={({ isActive }) => (isActive ? "active" : "")}
+            style={{ textDecoration: 'none', color: 'white' }}
+          >
+            <li>Home</li>
+          </NavLink>
+          <NavLink
+            to="/dashboard/assign-tasks"
+            className={({ isActive }) => (isActive ? "active" : "")}
+            style={{ textDecoration: 'none', color: 'white' }}
+          >
+            <li>Assign Tasks</li>
+          </NavLink>
+          <NavLink
+            to="/dashboard/view-tasks"
+            className={({ isActive }) => (isActive ? "active" : "")}
+            style={{ textDecoration: 'none', color: 'white' }}
+          >
+            <li>View Tasks</li>
+          </NavLink>
           <li>Users</li>
         </ul>
       </div>

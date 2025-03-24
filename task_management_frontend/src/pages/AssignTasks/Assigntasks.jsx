@@ -1,9 +1,10 @@
 // src/pages/Tasks/AssignTasks.jsx
 import React, { useState } from "react";
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import "./AssignTasks.css";
 
-const Assigntasks = () => {
-  // State for task details
+const AssignTasks = () => {
   const [task, setTask] = useState({
     title: "",
     description: "",
@@ -14,36 +15,48 @@ const Assigntasks = () => {
     document: null,
   });
 
-  // Dummy users for dropdown
   const users = ["John Doe", "Jane Smith", "Alice Brown", "Bob Johnson"];
+  const navigate = useNavigate(); // Initialize useNavigate
 
-  // Handle input changes
   const handleChange = (e) => {
     setTask({ ...task, [e.target.name]: e.target.value });
   };
 
-  // Handle file upload
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setTask({ ...task, document: file });
+      setTask({ ...task, document: file.name });
     }
   };
 
-  // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Task Created:", task);
-    alert("Task Assigned Successfully!");
-    setTask({
-      title: "",
-      description: "",
-      status: "Pending",
-      priority: "Medium",
-      dueDate: "",
-      assignedUser: "",
-      document: null,
-    });
+    try {
+      const taskData = {
+        title: task.title,
+        description: task.description,
+        status: task.status,
+        priority: task.priority,
+        dueDate: task.dueDate,
+        assignedUser: task.assignedUser,
+        document: task.document,
+      };
+
+      await axios.post('http://localhost:5000/api/tasks', taskData);
+      setTask({
+        title: "",
+        description: "",
+        status: "Pending",
+        priority: "Medium",
+        dueDate: "",
+        assignedUser: "",
+        document: null,
+      });
+      navigate('/dashboard/view-tasks'); // Redirect to ViewTasks after success
+    } catch (err) {
+      console.error('Error assigning task:', err);
+      alert("Failed to assign task. Please try again.");
+    }
   };
 
   return (
@@ -51,7 +64,6 @@ const Assigntasks = () => {
       <h2>Assign New Task</h2>
       <form onSubmit={handleSubmit} className="task-form">
         <div className="form-grid">
-          {/* Title */}
           <div className="form-group">
             <label>Task Title</label>
             <input
@@ -63,8 +75,6 @@ const Assigntasks = () => {
               required
             />
           </div>
-
-          {/* Due Date */}
           <div className="form-group">
             <label>Due Date</label>
             <input
@@ -75,8 +85,6 @@ const Assigntasks = () => {
               required
             />
           </div>
-
-          {/* Status */}
           <div className="form-group">
             <label>Status</label>
             <select name="status" value={task.status} onChange={handleChange}>
@@ -85,8 +93,6 @@ const Assigntasks = () => {
               <option value="Completed">Completed</option>
             </select>
           </div>
-
-          {/* Priority */}
           <div className="form-group">
             <label>Priority</label>
             <select name="priority" value={task.priority} onChange={handleChange}>
@@ -95,8 +101,6 @@ const Assigntasks = () => {
               <option value="Low">Low</option>
             </select>
           </div>
-
-          {/* Assign User */}
           <div className="form-group">
             <label>Assign To</label>
             <select name="assignedUser" value={task.assignedUser} onChange={handleChange} required>
@@ -108,16 +112,12 @@ const Assigntasks = () => {
               ))}
             </select>
           </div>
-
-          {/* Upload Document */}
           <div className="form-group">
             <label>Upload Document</label>
             <input type="file" accept=".pdf,.docx,.png,.jpg" onChange={handleFileChange} />
-            {task.document && <p className="file-name">📄 {task.document.name}</p>}
+            {task.document && <p className="file-name">📄 {task.document}</p>}
           </div>
         </div>
-
-        {/* Description (Full Width) */}
         <div className="form-group full-width">
           <label>Description</label>
           <textarea
@@ -128,12 +128,10 @@ const Assigntasks = () => {
             required
           ></textarea>
         </div>
-
-        {/* Submit Button */}
         <button type="submit">Assign Task</button>
       </form>
     </div>
   );
 };
 
-export default Assigntasks;
+export default AssignTasks;
