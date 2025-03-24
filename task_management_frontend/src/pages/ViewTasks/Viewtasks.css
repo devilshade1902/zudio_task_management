@@ -1,0 +1,68 @@
+/* src/pages/Tasks/ViewTasks.css */
+
+.view-tasks-container {
+    padding: 24px;
+    background-color: #f4f6f9;
+    min-height: 100vh;
+  }
+  
+  .view-tasks-container h2 {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #333;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  /* Grid Layout for Cards */
+  .tasks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    justify-content: center;
+  }
+  
+  /* Task Cards */
+  .card {
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+    background: #ffffff;
+    padding: 20px;
+  }
+  
+  .card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+  }
+  
+  .card-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  
+  .card-text {
+    font-size: 1rem;
+    color: #333;
+  }
+  
+  /* Priority Colors */
+  .border-danger {
+    border-left: 5px solid #dc3545;
+    background: linear-gradient(135deg, #ff7675, #e74c3c);
+    color: white;
+  }
+  
+  .border-warning {
+    border-left: 5px solid #f39c12;
+    background: linear-gradient(135deg, #f39c12, #f1c40f);
+    color: white;
+  }
+  
+  .border-success {
+    border-left: 5px solid #28a745;
+    background: linear-gradient(135deg, #2ecc71, #1abc9c);
+    color: white;
+  }
+  

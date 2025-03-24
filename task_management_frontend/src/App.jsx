@@ -6,6 +6,8 @@ import Dashboard from "./pages/Dashboard/Dashboard";
 import Login from "./pages/Login/Login";
 import SignUp from "./pages/Signup/Signup";
 import Tasks from "./pages/Tasks/Tasks";
+import AssignTasks from "./pages/AssignTasks/Assigntasks";
+import ViewTasks from "./pages/ViewTasks/Viewtasks";
 
 function App() {
   return (
@@ -14,10 +16,10 @@ function App() {
         <Route path="/" element={<Login />} />  {/* Default page is Login */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
-        <Route path="/" element={<Layout />}>  {/* Layout wraps app pages */}
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="tasks" element={<Tasks />} />
-          <Route index element={<Dashboard />} />  {/* / shows Dashboard */}
+        <Route path="/dashboard" element={<Layout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="assign-tasks" element={<AssignTasks />} />
+          <Route path="view-tasks" element={<ViewTasks />} /> 
         </Route>
       </Routes>
     </BrowserRouter>
