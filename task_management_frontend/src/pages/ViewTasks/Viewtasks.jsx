@@ -3,7 +3,7 @@ import React from "react";
 import "./ViewTasks.css";
 
 const ViewTasks = () => {
-  // Dummy task data
+  // Dummy task data (6 tasks)
   const tasks = [
     {
       title: "Design Homepage",
@@ -29,17 +29,41 @@ const ViewTasks = () => {
       dueDate: "2024-03-25",
       assignedUser: "Alice Brown",
     },
+    {
+      title: "Optimize Database",
+      description: "Improve query performance.",
+      status: "In Progress",
+      priority: "High",
+      dueDate: "2024-04-05",
+      assignedUser: "Mike Johnson",
+    },
+    {
+      title: "Test Payment Gateway",
+      description: "Ensure smooth transactions.",
+      status: "Pending",
+      priority: "Medium",
+      dueDate: "2024-04-08",
+      assignedUser: "Emma Davis",
+    },
+    {
+      title: "Write Unit Tests",
+      description: "Increase test coverage.",
+      status: "Pending",
+      priority: "Low",
+      dueDate: "2024-04-10",
+      assignedUser: "Oliver Wilson",
+    },
   ];
 
   // Function to determine card color based on priority
   const getPriorityClass = (priority) => {
     switch (priority) {
       case "High":
-        return "card border-danger";
+        return "card high-priority";
       case "Medium":
-        return "card border-warning";
+        return "card medium-priority";
       case "Low":
-        return "card border-success";
+        return "card low-priority";
       default:
         return "card";
     }

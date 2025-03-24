@@ -4,6 +4,9 @@
     padding: 24px;
     background-color: #f4f6f9;
     min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
   
   .view-tasks-container h2 {
@@ -14,55 +17,61 @@
     margin-bottom: 20px;
   }
   
-  /* Grid Layout for Cards */
+  /* Grid Layout for Tasks */
   .tasks-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(2, 1fr); /* Always 2 columns */
     gap: 20px;
-    justify-content: center;
+    max-width: 800px; /* Ensure the grid is not too wide */
+    width: 100%;
   }
   
   /* Task Cards */
   .card {
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
     background: #ffffff;
-    padding: 20px;
+    padding: 16px;
+    text-align: left;
   }
   
   .card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+    transform: translateY(-6px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.12);
   }
   
   .card-title {
-    font-size: 1.3rem;
+    font-size: 1.1rem;
     font-weight: 600;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
   
   .card-text {
-    font-size: 1rem;
+    font-size: 0.95rem;
     color: #333;
   }
   
-  /* Priority Colors */
-  .border-danger {
-    border-left: 5px solid #dc3545;
-    background: linear-gradient(135deg, #ff7675, #e74c3c);
-    color: white;
+  /* Priority Colors with Lighter Backgrounds */
+  .high-priority {
+    border-left: 5px solid #e74c3c;
+    background: #ffdddd;
   }
   
-  .border-warning {
+  .medium-priority {
     border-left: 5px solid #f39c12;
-    background: linear-gradient(135deg, #f39c12, #f1c40f);
-    color: white;
+    background: #fff4d1;
   }
   
-  .border-success {
-    border-left: 5px solid #28a745;
-    background: linear-gradient(135deg, #2ecc71, #1abc9c);
-    color: white;
+  .low-priority {
+    border-left: 5px solid #2ecc71;
+    background: #dfffe1;
+  }
+  
+  /* Responsive for Mobile: 1 Card Per Row */
+  @media (max-width: 768px) {
+    .tasks-grid {
+      grid-template-columns: 1fr; /* Single column layout on smaller screens */
+    }
   }
   
