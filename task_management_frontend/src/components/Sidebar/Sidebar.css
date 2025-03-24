@@ -1,19 +1,20 @@
 /* src/components/Sidebar/Sidebar.css */
+
 .sidebar {
   position: fixed;
   top: 0;
-  left: -240px;
-  width: 240px;
+  left: -250px;
+  width: 250px;
   height: 100vh;
-  background: #2c2f36;
+  background: linear-gradient(135deg, #1c1f26, #292e38);
   color: white;
   padding: 20px;
   transition: left 0.3s ease-in-out;
-  box-shadow: 3px 0 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 3px 0 10px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
   align-items: center;
-  z-index: 900; /* Below toggle button but above content */
+  z-index: 1050;
 }
 
 .sidebar.open {
@@ -21,9 +22,13 @@
 }
 
 .sidebar h2 {
-  margin-bottom: 20px;
-  font-size: 22px;
+  font-size: 20px;
+  font-weight: 600;
   text-align: center;
+  margin-bottom: 15px;
+  color: #ffffff;
+  letter-spacing: 0.8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
   padding-bottom: 10px;
   width: 100%;
 }
@@ -35,12 +40,20 @@
 }
 
 .sidebar ul li {
-  padding: 12px 0;
-  text-align: center;
-  font-size: 18px;
+  padding: 12px;
+  text-align: left;
+  font-size: 16px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   transition: background 0.2s ease-in-out;
-  border-radius: 5px;
+  border-radius: 6px;
+  color: #ddd;
+}
+
+.sidebar ul li i {
+  font-size: 18px;
 }
 
 .sidebar ul li:hover {
@@ -48,24 +61,24 @@
   color: white;
 }
 
-/* Fix the toggle button */
+/* Sidebar Toggle Button */
 .sidebar-toggle {
   position: fixed;
-  top: 9px; /* Aligns with Topbar padding */
-  left: 15px; /* Adjusted to be visible outside Sidebar initially */
+  top: 15px;
+  left: 15px;
   background: #007bff;
   color: white;
   border: none;
   padding: 10px;
   cursor: pointer;
-  border-radius: 5px;
+  border-radius: 6px;
   transition: all 0.3s ease-in-out;
   box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
-  z-index: 1100; /* Higher than Topbar’s z-index: 1000 */
+  z-index: 1100;
 }
 
 .sidebar-toggle.shifted {
-  left: 255px; /* Adjusted to align with Sidebar width (240px + padding) */
+  left: 265px;
 }
 
 .sidebar-toggle:hover {
