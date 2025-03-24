@@ -9,9 +9,8 @@ const Topbar = ({ isOpen, toggle }) => { // Changed isopen to isOpen
     <div className={`topbar ${isOpen ? "shifted" : ""}`}>
       <h1>Task Management</h1>
       <nav className="nav-links">
-        <Link to="/">Dashboard</Link>
-        <Link to="/login">Login</Link>
-        <Link to="/signup">Sign Up</Link>
+        <Link to="/dashboard">Admin Dashboard</Link>
+        <Link to="/login">Sign Out</Link>
         <CgProfile className="profile-icon" size={30} />
       </nav>
     </div>

@@ -1,0 +1,111 @@
+/* src/components/chatbox/ChatBox.css */
+.chat-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+  }
+  
+  /* Floating chat button */
+  .chat-toggle-button {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 50%;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: transform 0.2s ease-in-out;
+  }
+  
+  .chat-toggle-button:hover {
+    transform: scale(1.1);
+  }
+  
+  /* Chatbox window */
+  .chatbox {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    width: 320px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  
+  /* Chatbox header */
+  .chatbox-header {
+    background: #007bff;
+    color: white;
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 16px;
+  }
+  
+  /* Close button */
+  .close-btn {
+    background: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+  }
+  
+  /* Messages container */
+  .chatbox-messages {
+    max-height: 250px;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    background: #f9f9f9;
+  }
+  
+  /* Message bubbles */
+  .message {
+    padding: 8px 12px;
+    border-radius: 10px;
+    max-width: 80%;
+    word-break: break-word;
+  }
+  
+  .message.user {
+    align-self: flex-end;
+    background-color: #007bff;
+    color: white;
+  }
+  
+  /* Input box */
+  .chatbox-input {
+    display: flex;
+    padding: 10px;
+    border-top: 1px solid #ddd;
+  }
+  
+  .chatbox-input input {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    border-radius: 6px;
+  }
+  
+  .chatbox-input button {
+    background: #007bff;
+    border: none;
+    color: white;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-left: 5px;
+  }
+  
+  .chatbox-input button:hover {
+    background: #0056b3;
+  }
+  

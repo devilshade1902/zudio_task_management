@@ -1,59 +1,65 @@
 /* src/components/Topbar/Topbar.css */
+
 .topbar {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  background: white;
-  color: black;
+  background: rgba(255, 255, 255, 0.9); /* Subtle glass effect */
+  backdrop-filter: blur(12px);
+  color: #222;
   padding: 15px 30px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
-  height: 60px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  height: 70px;
   z-index: 1000;
-  transition: left 0.3s ease-in-out, width 0.3s ease-in-out; /* Smooth transition for left and width */
+  transition: left 0.3s ease-in-out, width 0.3s ease-in-out;
 }
 
 .topbar h1 {
-  color: black;
+  font-size: 26px;
+  font-weight: 700;
   margin-left: 100px;
-  font-size: 24px;
+  color: #222;
 }
 
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 30px;
+  gap: 35px;
   margin-right: 100px;
 }
 
 .topbar nav a {
-  color: black;
+  color: #222;
   text-decoration: none;
-  font-size: 16px;
+  font-size: 17px;
+  font-weight: 500;
+  padding: 10px 15px;
+  border-radius: 8px;
+  transition: background 0.3s ease-in-out, color 0.3s ease-in-out;
 }
 
 .topbar nav a:hover {
-  text-decoration: underline;
-  color: #007bff;
+  background: #007bff;
+  color: white;
 }
 
 .profile-icon {
-  color: black;
+  color: #222;
+  font-size: 28px; /* Increased size */
   cursor: pointer;
-  position: relative;
-  top: 0px;
+  transition: color 0.3s ease-in-out, transform 0.2s ease-in-out;
+}
+
+.profile-icon:hover {
+  color: #007bff;
+  transform: scale(1.1);
 }
 
 .topbar.shifted {
-  left: 240px; /* Matches Sidebar width */
-  width: calc(100% - 240px); /* Adjusts width smoothly */
-}
-
-/* Remove the old h1-specific shift */
-.topbar.shifted h1 {
-  position: static;
-  left: 0;
+  left: 250px;
+  width: calc(100% - 250px);
 }
