@@ -8,6 +8,7 @@ import SignUp from "./pages/Signup/Signup";
 import Tasks from "./pages/Tasks/Tasks";
 import AssignTasks from "./pages/AssignTasks/Assigntasks";
 import ViewTasks from "./pages/ViewTasks/Viewtasks";
+import Users from "./pages/Users/Users";
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="assign-tasks" element={<AssignTasks />} />
           <Route path="view-tasks" element={<ViewTasks />} /> 
+          <Route path="users" element={<Users />} /> 
         </Route>
       </Routes>
     </BrowserRouter>

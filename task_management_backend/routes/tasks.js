@@ -2,6 +2,10 @@
 const express = require('express');
 const router = express.Router();
 const Task = require('../models/Task');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+
 
 // Get all tasks with aggregated stats
 router.get('/', async (req, res) => {
@@ -88,5 +92,6 @@ router.put('/:id', async (req, res) => {
     res.status(400).json({ message: err.message });
   }
 });
+
 
 module.exports = router;

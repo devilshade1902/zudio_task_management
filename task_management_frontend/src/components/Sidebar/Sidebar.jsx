@@ -35,7 +35,13 @@ const Sidebar = ({ isOpen, toggle }) => {
           >
             <li>View Tasks</li>
           </NavLink>
-          <li>Users</li>
+          <NavLink
+            to="/dashboard/users"
+            className={({ isActive }) => (isActive ? "active" : "")}
+            style={{ textDecoration: 'none', color: 'white' }}
+          >
+            <li>Users</li>
+          </NavLink>
         </ul>
       </div>
     </div>

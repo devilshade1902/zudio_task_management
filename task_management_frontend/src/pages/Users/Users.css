@@ -1,0 +1,56 @@
+/* src/pages/Users/Users.css */
+.users-container {
+    padding: 30px;
+    background-color: #f4f6f9;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .users-container h2 {
+    font-weight: bold;
+    color: #0c056d; /* Matches Signup.css */
+    margin-bottom: 20px;
+    font-size: 1.8rem;
+  }
+  
+  .users-container p {
+    color: #6c757d; /* Matches Login.css and Signup.css */
+    font-size: 1rem;
+  }
+  
+  .users-table {
+    width: 100%;
+    max-width: 800px;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Matches card styling */
+  }
+  
+  .users-table th,
+  .users-table td {
+    padding: 15px;
+    text-align: left;
+    border-bottom: 1px solid #ccc;
+  }
+  
+  .users-table th {
+    background: #0c056d; /* Matches btn-primary in Signup.css */
+    color: white;
+    font-weight: 600;
+  }
+  
+  .users-table tr:nth-child(even) {
+    background: #f8f9fa; /* Matches Login.css background */
+  }
+  
+  .users-table tr:hover {
+    background: #f1f1f1; /* Matches btn-google hover */
+  }
+  
+  .error {
+    color: #dc3545; /* Matches error popup in Login.css/Signup.css */
+    font-size: 1rem;
+  }

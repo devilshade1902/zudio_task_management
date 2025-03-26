@@ -1,72 +1,125 @@
+/* src/pages/Signup/Signup.css */
 .signup-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    background-color: #f4f6f9;
-  }
-  
-  .signup-card {
-    background: #fff;
-    padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    text-align: center;
-    width: 100%;
-    max-width: 400px;
-  }
-  
-  .signup-card h2 {
-    margin-bottom: 20px;
-    font-weight: bold;
-    color: #0c056d;
-  }
-  
-  .form-group {
-    margin-bottom: 15px;
-    text-align: left;
-  }
-  
-  .form-group label {
-    display: block;
-    font-weight: 600;
-    margin-bottom: 5px;
-  }
-  
-  .form-group input {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-  }
-  
-  .btn-primary {
-    background: #0c056d;
-    color: white;
-    border: none;
-    padding: 10px;
-    width: 100%;
-    font-size: 16px;
-    cursor: pointer;
-    border-radius: 5px;
-    transition: background 0.3s;
-  }
-  
-  .btn-primary:hover {
-    background: #11079e;
-  }
-  
-  .switch-page {
-    margin-top: 15px;
-  }
-  
-  .switch-page a {
-    color: #0c056d;
-    font-weight: bold;
-    text-decoration: none;
-  }
-  
-  .switch-page a:hover {
-    text-decoration: underline;
-  }
-  
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #f4f6f9;
+}
+
+.signup-card {
+  background: #fff;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  width: 100%;
+  max-width: 400px;
+}
+
+.signup-card h2 {
+  margin-bottom: 20px;
+  font-weight: bold;
+  color: #0c056d;
+}
+
+.form-group {
+  margin-bottom: 15px;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.btn-primary {
+  background: #0c056d;
+  color: white;
+  border: none;
+  padding: 10px;
+  width: 100%;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: background 0.3s;
+}
+
+.btn-primary:hover {
+  background: #11079e;
+}
+
+.switch-page {
+  margin-top: 15px;
+}
+
+.switch-page a {
+  color: #0c056d;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.switch-page a:hover {
+  text-decoration: underline;
+}
+
+/* Error Popup Styles */
+.error-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.error-popup {
+  background: #fff;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  width: 100%;
+  max-width: 400px; /* Matches signup-card */
+}
+
+.error-popup h3 {
+  margin-bottom: 10px;
+  font-weight: bold;
+  color: #dc3545; /* Red for error, contrasts with #0c056d */
+  font-size: 1.2rem;
+}
+
+.error-popup p {
+  color: #6c757d; /* Matches switch-page text */
+  font-size: 0.9rem;
+  margin-bottom: 15px;
+}
+
+.error-popup .close-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 10px;
+  width: 100%;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: background 0.3s;
+}
+
+.error-popup .close-btn:hover {
+  background: #c82333; /* Darker red on hover */
+}
