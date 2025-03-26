@@ -1,8 +1,20 @@
-// src/pages/Dashboard/Dashboard.jsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "./Dashboard.css";
 import ChatBox from "../../components/chatbox/Chatbox";
+import { Bar } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+
+// Register Chart.js components
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const Dashboard = () => {
   const [progressData, setProgressData] = useState({
@@ -16,22 +28,13 @@ const Dashboard = () => {
     lowPriority: 0,
   });
 
-  // Fetch tasks and compute stats
+  // Fetch tasks from API
   const fetchTasks = async () => {
     try {
-      const response = await axios.get('http://localhost:5001/api/tasks');
-      setProgressData({
-        totalTasks: response.data.totalTasks,
-        completedTasks: response.data.completedTasks,
-        inProgressTasks: response.data.inProgressTasks,
-        pendingTasks: response.data.pendingTasks,
-        overdueTasks: response.data.overdueTasks,
-        highPriority: response.data.highPriority,
-        mediumPriority: response.data.mediumPriority,
-        lowPriority: response.data.lowPriority,
-      });
+      const response = await axios.get("http://localhost:5001/api/tasks");
+      setProgressData(response.data);
     } catch (err) {
-      console.error('Error fetching tasks:', err);
+      console.error("Error fetching tasks:", err);
     }
   };
 
@@ -39,11 +42,40 @@ const Dashboard = () => {
     fetchTasks();
   }, []);
 
-  const completionPercentage = (progressData.completedTasks / progressData.totalTasks) * 100 || 0;
+  const completionPercentage = progressData.totalTasks
+    ? (progressData.completedTasks / progressData.totalTasks) * 100
+    : 0;
+
+  // Bar Chart Data
+  const barData = {
+    labels: ["Completed", "In Progress", "Pending", "Overdue"],
+    datasets: [
+      {
+        label: "Tasks",
+        data: [
+          progressData.completedTasks,
+          progressData.inProgressTasks,
+          progressData.pendingTasks,
+          progressData.overdueTasks,
+        ],
+        backgroundColor: ["#28a745", "#007bff", "#ffc107", "#dc3545"],
+      },
+    ],
+  };
+
+  const barOptions = {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      title: { display: true, text: "Task Status Distribution" },
+    },
+  };
 
   return (
     <div className="dashboard container mt-4">
       <h2 className="text-center mb-4">Task Progress Dashboard</h2>
+
+      {/* Progress Bar */}
       <div className="row mb-4">
         <div className="col-md-6 mx-auto">
           <div className="card shadow-sm">
@@ -69,6 +101,8 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Task Status Cards */}
       <div className="row g-4">
         <div className="col-md-4">
           <div className="card text-white bg-primary shadow-sm">
@@ -95,33 +129,22 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
-      <div className="row g-4 mt-4">
-        <div className="col-md-4">
-          <div className="card border-danger shadow-sm">
+
+      {/* Bar Chart Section */}
+      <div className="row mb-4 m-4">
+        <div className="col-md-8 mx-auto">
+          <div className="card shadow-sm">
             <div className="card-body">
-              <h5 className="card-title text-danger">High Priority</h5>
-              <p className="card-text display-6">{progressData.highPriority}</p>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-4">
-          <div className="card border-warning shadow-sm">
-            <div className="card-body">
-              <h5 className="card-title text-warning">Medium Priority</h5>
-              <p className="card-text display-6">{progressData.mediumPriority}</p>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-4">
-          <div className="card border-success shadow-sm">
-            <div className="card-body">
-              <h5 className="card-title text-success">Low Priority</h5>
-              <p className="card-text display-6">{progressData.lowPriority}</p>
+              <h5 className="card-title">Task Distribution</h5>
+              <Bar data={barData} options={barOptions} />
             </div>
           </div>
         </div>
       </div>
+
+      {/* ChatBox Component */}
       <ChatBox />
+
       <div style={{ height: "100vh" }}></div>
     </div>
   );
