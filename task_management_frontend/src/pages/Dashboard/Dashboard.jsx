@@ -19,7 +19,7 @@ const Dashboard = () => {
   // Fetch tasks and compute stats
   const fetchTasks = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/tasks');
+      const response = await axios.get('http://localhost:5001/api/tasks');
       setProgressData({
         totalTasks: response.data.totalTasks,
         completedTasks: response.data.completedTasks,

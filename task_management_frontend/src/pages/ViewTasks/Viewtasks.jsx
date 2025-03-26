@@ -8,13 +8,18 @@ const ViewTasks = () => {
   const [tasks, setTasks] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [filteredTasks, setFilteredTasks] = useState([]);
+  const [priorityFilter, setPriorityFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [dateSort, setDateSort] = useState("");
 
   const users = ["John Doe", "Jane Smith", "Alice Brown", "Bob Johnson"];
 
   const fetchTasks = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/tasks');
+      const response = await axios.get('http://localhost:5001/api/tasks');
       setTasks(response.data.tasks);
+      setFilteredTasks(response.data.tasks);
     } catch (err) {
       console.error('Error fetching tasks:', err);
     }
@@ -24,10 +29,30 @@ const ViewTasks = () => {
     fetchTasks();
   }, []);
 
+  useEffect(() => {
+    let updatedTasks = [...tasks];
+
+    if (priorityFilter) {
+      updatedTasks = updatedTasks.filter(task => task.priority === priorityFilter);
+    }
+    if (statusFilter) {
+      updatedTasks = updatedTasks.filter(task => task.status === statusFilter);
+    }
+    if (dateSort) {
+      updatedTasks.sort((a, b) => {
+        const dateA = new Date(a.dueDate);
+        const dateB = new Date(b.dueDate);
+        return dateSort === "asc" ? dateA - dateB : dateB - dateA;
+      });
+    }
+
+    setFilteredTasks(updatedTasks);
+  }, [priorityFilter, statusFilter, dateSort, tasks]);
+
   const handleDelete = async (taskId) => {
     if (window.confirm("Are you sure you want to delete this task?")) {
       try {
-        await axios.delete(`http://localhost:5000/api/tasks/${taskId}`);
+        await axios.delete(`http://localhost:5001/api/tasks/${taskId}`);
         setTasks(tasks.filter(task => task._id !== taskId));
       } catch (err) {
         console.error('Error deleting task:', err);
@@ -41,6 +66,7 @@ const ViewTasks = () => {
     setIsModalOpen(true);
   };
 
+  
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setSelectedTask(prev => ({ ...prev, [name]: value }));
@@ -53,10 +79,19 @@ const ViewTasks = () => {
     }
   };
 
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'High': return '#FF4D4F'; // Red for high priority
+      case 'Medium': return '#FAAD14'; // Orange for medium priority
+      case 'Low': return '#52C41A'; // Green for low priority
+      default: return '#D9D9D9'; // Grey for not set
+    }
+  };
+  
   const handleUpdate = async (e) => {
     e.preventDefault();
     try {
-      await axios.put(`http://localhost:5000/api/tasks/${selectedTask._id}`, selectedTask);
+      await axios.put(`http://localhost:5001/api/tasks/${selectedTask._id}`, selectedTask);
       setIsModalOpen(false);
       fetchTasks();
     } catch (err) {
@@ -65,47 +100,58 @@ const ViewTasks = () => {
     }
   };
 
-  const getPriorityClass = (priority) => {
-    switch (priority) {
-      case "High": return "card high-priority";
-      case "Medium": return "card medium-priority";
-      case "Low": return "card low-priority";
-      default: return "card";
-    }
-  };
-
   return (
     <div className="view-tasks-container">
-      <h2>Assigned Tasks</h2>
-      {tasks.length === 0 ? (
-        <p>No tasks available</p>
-      ) : (
-        <div className="tasks-grid">
-          {tasks.map((task) => (
-            <div key={task._id} className={getPriorityClass(task.priority)}>
-              <div className="card-body">
-                <div className="card-header">
-                  <h3 className="card-title">{task.title}</h3>
-                  <div>
-                    <button className="edit-btn" onClick={() => handleEdit(task)} title="Edit Task">
-                      <FaEdit />
-                    </button>
-                    <button className="delete-btn" onClick={() => handleDelete(task._id)} title="Delete Task">
-                      <FaTrash />
-                    </button>
-                  </div>
-                </div>
-                <p className="card-text">{task.description || "No description provided"}</p>
-                <p><strong>Status:</strong> {task.status}</p>
-                <p><strong>Priority:</strong> {task.priority || "Not set"}</p>
-                <p><strong>Due Date:</strong> {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "Not set"}</p>
-                <p><strong>Assigned To:</strong> {task.assignedUser || "Not assigned"}</p>
-                {task.document && <p><strong>Document:</strong> {task.document}</p>}
-                <p><strong>Employees Assigned:</strong> {task.employeesAssigned}</p>
+    <h2>Assigned Tasks</h2>
+    {/* Filter Section */}
+    <div className="filters">
+      <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
+        <option value="">All Priorities</option>
+        <option value="High">High</option>
+        <option value="Medium">Medium</option>
+        <option value="Low">Low</option>
+      </select>
+
+      <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+        <option value="">All Progress</option>
+        <option value="Pending">Pending</option>
+        <option value="In Progress">In Progress</option>
+        <option value="Completed">Completed</option>
+      </select>
+
+      <select value={dateSort} onChange={(e) => setDateSort(e.target.value)}>
+        <option value="">Sort by Date</option>
+        <option value="asc">Nearest First</option>
+        <option value="desc">Farthest First</option>
+      </select>
+    </div>
+    {filteredTasks.length === 0 ? (
+      <p>No tasks available</p>
+    ) : (
+      <div className="tasks-grid">
+        {filteredTasks.map((task) => (
+          <div key={task._id} className="task-card" style={{ borderLeft: `4px solid ${getPriorityColor(task.priority)}` }}>
+            <div className="card-header">
+              <h3 className="card-title">{task.title}</h3>
+              <div className="card-actions">
+                <button className="edit-btn" onClick={() => handleEdit(task)} title="Edit Task">
+                  <FaEdit />
+                </button>
+                <button className="delete-btn" onClick={() => handleDelete(task._id)} title="Delete Task">
+                  <FaTrash />
+                </button>
               </div>
             </div>
-          ))}
-        </div>
+            <p className="card-text">{task.description || "No description provided"}</p>
+            <p><strong>Status:</strong> {task.status}</p>
+            <p><strong>Priority:</strong> {task.priority || "Not set"}</p>
+            <p><strong>Due Date:</strong> {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "Not set"}</p>
+            <p><strong>Assigned To:</strong> {task.assignedUser || "Not assigned"}</p>
+            {task.document && <p><strong>Document:</strong> {task.document}</p>}
+            <p><strong>Users Assigned:</strong> {task.employeesAssigned}</p>
+          </div>
+        ))}
+      </div>
       )}
 
       {/* Update Modal */}

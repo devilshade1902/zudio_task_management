@@ -21,7 +21,7 @@ const Tasks = () => {
   // Fetch tasks from backend
   const fetchTasks = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/tasks');
+      const response = await axios.get('http://localhost:5001/api/tasks');
       setTaskData({
         totalTasks: response.data.totalTasks,
         completedTasks: response.data.completedTasks,
@@ -52,7 +52,7 @@ const Tasks = () => {
     e.preventDefault(); // Prevent form submission refresh
     if (!newTask.title) return;
     try {
-      await axios.post('http://localhost:5000/api/tasks', {
+      await axios.post('http://localhost:5001/api/tasks', {
         title: newTask.title,
         description: newTask.description,
         employeesAssigned: newTask.employeesAssigned,
