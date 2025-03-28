@@ -1,4 +1,3 @@
-// src/pages/Tasks/ViewTasks.jsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { FaTrash, FaEdit, FaPlus } from 'react-icons/fa';
@@ -14,7 +13,18 @@ const ViewTasks = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [isNewTask, setIsNewTask] = useState(false);
-  const users = ["John Doe", "Jane Smith", "Alice Brown", "Bob Johnson"];
+  const [users, setUsers] = useState(["None"]);
+  const [loading, setLoading] = useState(true); // New loading state
+
+  const fetchUsers = async () => {
+    try {
+      const response = await axios.get('http://localhost:5001/api/users');
+      setUsers(response.data.map(user => user.name));
+    } catch (err) {
+      console.error('Error fetching users:', err);
+      alert("Failed to load users. Please try again.");
+    }
+  };
 
   const fetchTasks = async () => {
     try {
@@ -36,7 +46,12 @@ const ViewTasks = () => {
   };
 
   useEffect(() => {
-    fetchTasks();
+    const loadData = async () => {
+      setLoading(true); // Start loading
+      await Promise.all([fetchUsers(), fetchTasks()]); // Fetch both users and tasks
+      setLoading(false); // Stop loading when both are done
+    };
+    loadData();
   }, []);
 
   const handleDelete = async (taskId, status) => {
@@ -138,6 +153,16 @@ const ViewTasks = () => {
       fetchTasks();
     }
   };
+
+  if (loading) {
+    return (
+      <div className="kanban-container viewtasks-loading">
+        <div className="loader">
+          <div className="spinner"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="kanban-container">

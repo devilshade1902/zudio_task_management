@@ -1,0 +1,133 @@
+.mytasks-container {
+    padding: 30px;
+    background: linear-gradient(135deg, #f4f6f9 0%, #e9ecef 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .mytasks-container h2 {
+    font-weight: 700;
+    color: #0c056d;
+    font-size: 2rem;
+    margin-bottom: 30px;
+    text-align: center;
+  }
+  
+  .mytasks-list {
+    width: 100%;
+    max-width: 800px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .mytasks-task-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: box-shadow 0.2s ease;
+  }
+  
+  .mytasks-task-card:hover {
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  }
+  
+  .mytasks-task-content {
+    flex: 1;
+  }
+  
+  .mytasks-task-content h4 {
+    margin: 0 0 10px;
+    font-size: 18px;
+    color: #222;
+  }
+  
+  .mytasks-task-content p {
+    margin: 5px 0;
+    font-size: 14px;
+    color: #555;
+  }
+  
+  .mytasks-complete-btn {
+    background: #52c41a; /* Green */
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.2s ease;
+  }
+  
+  .mytasks-complete-btn:hover {
+    background: #389e0d; /* Darker green */
+  }
+  
+  .mytasks-no-tasks {
+    text-align: center;
+    color: #6c757d;
+    font-size: 1.2rem;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  .mytasks-loading {
+    color: #0c056d;
+    font-size: 1.2rem;
+    text-align: center;
+    padding: 20px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  .mytasks-error {
+    color: #dc3545;
+    font-size: 1.2rem;
+    text-align: center;
+    padding: 20px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  @media (max-width: 768px) {
+    .mytasks-container {
+      padding: 20px;
+    }
+  
+    .mytasks-container h2 {
+      font-size: 1.5rem;
+    }
+  
+    .mytasks-task-card {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 15px;
+      padding: 15px;
+    }
+  
+    .mytasks-task-content h4 {
+      font-size: 16px;
+    }
+  
+    .mytasks-task-content p {
+      font-size: 12px;
+    }
+  
+    .mytasks-complete-btn {
+      width: 100%;
+      justify-content: center;
+    }
+  }
