@@ -7,6 +7,7 @@ import Login from "./pages/Login/Login";
 import SignUp from "./pages/Signup/Signup";
 import ViewTasks from "./pages/ViewTasks/Viewtasks";
 import Users from "./pages/Users/Users";
+import MyTasks from "./pages/MyTasks/MyTasks";
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="view-tasks" element={<ViewTasks />} /> 
           <Route path="users" element={<Users />} /> 
+          <Route path="mytasks" element={<MyTasks />} /> 
         </Route>
       </Routes>
     </BrowserRouter>

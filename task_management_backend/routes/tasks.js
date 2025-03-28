@@ -93,5 +93,33 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+router.get('/mytasks', async (req, res) => {
+  try {
+    const { name } = req.query;
+    if (!name) {
+      return res.status(400).json({ message: 'Name query parameter is required' });
+    }
+    const tasks = await Task.find({ assignedUser: name });
+    res.json({ tasks });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Mark a task as completed
+router.put('/mytasks/:id/complete', async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+    task.status = 'Completed';
+    const updatedTask = await task.save();
+    res.json(updatedTask);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 
 module.exports = router;
