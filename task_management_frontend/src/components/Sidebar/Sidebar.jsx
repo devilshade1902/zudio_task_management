@@ -22,13 +22,6 @@ const Sidebar = ({ isOpen, toggle }) => {
             <li>Home</li>
           </NavLink>
           <NavLink
-            to="/dashboard/assign-tasks"
-            className={({ isActive }) => (isActive ? "active" : "")}
-            style={{ textDecoration: 'none', color: 'white' }}
-          >
-            <li>Assign Tasks</li>
-          </NavLink>
-          <NavLink
             to="/dashboard/view-tasks"
             className={({ isActive }) => (isActive ? "active" : "")}
             style={{ textDecoration: 'none', color: 'white' }}

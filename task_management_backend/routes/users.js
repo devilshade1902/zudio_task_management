@@ -41,17 +41,24 @@ router.post('/login', async (req, res) => {
   try {
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ message: 'Invalid email or password' });
+      return res.status(400).json({ message: 'Invalid credentials' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid email or password' });
+      return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ id: user._id }, 'your_jwt_secret', { expiresIn: '1h' });
-
-    res.json({ token, user: { id: user._id, name: user.name, email } });
+    // Include 'name' in the token payload instead of 'username'
+    const token = jwt.sign(
+      { id: user._id, name: user.name }, // Changed 'username' to 'name'
+      process.env.JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+    res.json({ 
+      token, 
+      user: { id: user._id, name: user.name, email: user.email } 
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
