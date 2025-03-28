@@ -1,56 +1,159 @@
-/* src/pages/Users/Users.css */
 .users-container {
-    padding: 30px;
-    background-color: #f4f6f9;
-    min-height: 100vh;
-    display: flex;
+  padding: 30px;
+  background: linear-gradient(135deg, #f4f6f9 0%, #e9ecef 100%);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.users-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 1000px;
+  margin-bottom: 30px;
+}
+
+.users-header h2 {
+  font-weight: 700;
+  color: #0c056d;
+  font-size: 2rem;
+  margin: 0;
+}
+
+.search-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 300px;
+}
+
+.search-bar input {
+  width: 100%;
+  padding: 10px 10px 10px 35px;
+  border: none;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.search-bar input:focus {
+  outline: none;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  color: #6c757d;
+}
+
+.no-users {
+  color: #6c757d;
+  font-size: 1.2rem;
+  text-align: center;
+  padding: 20px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.users-table-wrapper {
+  width: 100%;
+  max-width: 1000px;
+  overflow-x: auto;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.users-table th,
+.users-table td {
+  padding: 15px 20px;
+  text-align: left;
+}
+
+.users-table th {
+  background: #0c056d;
+  color: white;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  letter-spacing: 0.5px;
+}
+
+.users-table td {
+  border-bottom: 1px solid #e9ecef;
+  color: #333;
+  font-size: 1rem;
+}
+
+.users-table tr:last-child td {
+  border-bottom: none;
+}
+
+.users-table tr {
+  transition: background 0.2s ease;
+}
+
+.users-table tr:hover {
+  background: #f8f9fa;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #0c056d;
+}
+
+.spinner {
+  font-size: 2rem;
+  animation: spin 1s linear infinite;
+  margin-bottom: 10px;
+}
+
+.error {
+  color: #dc3545;
+  font-size: 1.2rem;
+  text-align: center;
+  padding: 20px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .users-header {
     flex-direction: column;
-    align-items: center;
+    gap: 20px;
   }
-  
-  .users-container h2 {
-    font-weight: bold;
-    color: #0c056d; /* Matches Signup.css */
-    margin-bottom: 20px;
-    font-size: 1.8rem;
-  }
-  
-  .users-container p {
-    color: #6c757d; /* Matches Login.css and Signup.css */
-    font-size: 1rem;
-  }
-  
-  .users-table {
+
+  .search-bar {
     width: 100%;
-    max-width: 800px;
-    border-collapse: collapse;
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Matches card styling */
+    max-width: 300px;
   }
-  
+
   .users-table th,
   .users-table td {
-    padding: 15px;
-    text-align: left;
-    border-bottom: 1px solid #ccc;
+    padding: 10px;
+    font-size: 0.9rem;
   }
-  
-  .users-table th {
-    background: #0c056d; /* Matches btn-primary in Signup.css */
-    color: white;
-    font-weight: 600;
-  }
-  
-  .users-table tr:nth-child(even) {
-    background: #f8f9fa; /* Matches Login.css background */
-  }
-  
-  .users-table tr:hover {
-    background: #f1f1f1; /* Matches btn-google hover */
-  }
-  
-  .error {
-    color: #dc3545; /* Matches error popup in Login.css/Signup.css */
-    font-size: 1rem;
-  }
+}
