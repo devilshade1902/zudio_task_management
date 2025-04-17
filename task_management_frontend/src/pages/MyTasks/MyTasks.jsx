@@ -48,9 +48,13 @@ const MyTasks = () => {
   const handleMarkAsCompleted = async (taskId) => {
     try {
       const response = await axios.put(`http://localhost:5001/api/tasks/mytasks/${taskId}/complete`);
-      setTasks(tasks.map(task =>
-        task._id === taskId ? { ...task, status: "Completed" } : task
-      ));
+      if (response.status === 200) {
+        setTasks(tasks.map(task =>
+          task._id === taskId ? { ...task, status: "Completed" } : task
+        ));
+      } else {
+        throw new Error("Unexpected response status");
+      }
     } catch (err) {
       console.error("Error marking task as completed:", err);
       alert("Failed to mark task as completed. Please try again.");
@@ -92,8 +96,8 @@ const MyTasks = () => {
               style={{ borderLeft: `4px solid ${getPriorityColor(task.priority)}` }}
             >
               <div className="mytasks-task-content">
-                <h4>{task.title}</h4>
-                <p>{task.description || "No description"}</p>
+                <h4 className="mytasks-task-title">{task.title}</h4>
+                <p className="mytasks-task-description">{task.description || "No description"}</p>
                 <p><strong>Status:</strong> {task.status}</p>
                 <p><strong>Priority:</strong> {task.priority}</p>
                 <p>

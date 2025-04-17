@@ -1,82 +1,134 @@
 /* src/pages/Dashboard/Dashboard.css */
-
 .dashboard {
-  padding: 24px;
-  background-color: #f4f6f9;
-  min-height: 100vh;
+  padding: 32px;
+  background-color: #f8fafc;
+  min-height: 50px;
 }
 
-.dashboard h2 {
-  font-size: 2rem;
-  font-weight: 600;
-  color: #333;
+.dashboard-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1a202c;
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 40px;
+  letter-spacing: -0.5px;
 }
 
-.card {
+.dashboard-card {
   border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
   background: #ffffff;
   border: none;
 }
 
-.card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+.dashboard-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
 }
 
 .card-body {
-  padding: 20px;
+  padding: 24px;
 }
 
 .card-title {
-  font-size: 1.3rem;
+  font-size: 1.4rem;
   font-weight: 600;
-  color: #333;
-  margin-bottom: 10px;
+  color: #2d3748;
+  margin-bottom: 16px;
 }
 
 .card-text.display-6 {
-  font-size: 2.2rem;
-  font-weight: bold;
-  color: #0c056d;
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: #ffffff;
 }
 
 /* Progress Bar Styling */
 .progress {
-  height: 12px;
-  border-radius: 20px;
-  background-color: #e0e0e0;
+  height: 25px;
+  border-radius: 12px;
+  background-color: #edf2f7;
   overflow: hidden;
 }
 
 .progress-bar {
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 1rem;
   text-align: center;
-  border-radius: 20px;
+  border-radius: 12px;
   transition: width 0.6s ease-in-out;
 }
 
-/* High Priority */
-.card.border-danger {
-  border-left: 5px solid #dc3545;
-  background: linear-gradient(135deg, #ff7675, #e74c3c);
+/* Task Card Styling */
+.task-card {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.task-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.task-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 12px;
+}
+
+.task-detail {
+  font-size: 0.9rem;
+  color: #4a5568;
+  margin: 6px 0;
+}
+
+.task-detail strong {
+  color: #2d3748;
+}
+
+/* No Tasks Message */
+.no-tasks {
+  font-size: 1rem;
+  color: #718096;
+  text-align: center;
+  padding: 20px;
+}
+
+/* Status Cards */
+.card.bg-primary {
+  background: linear-gradient(135deg, #63b3ed, #2b6cb0);
   color: white;
 }
 
-/* Medium Priority */
-.card.border-warning {
-  border-left: 5px solid #f39c12;
-  background: linear-gradient(135deg, #f39c12, #f1c40f);
+.card.bg-warning {
+  background: linear-gradient(135deg, #f6e05e, #d69e2e);
   color: white;
 }
 
-/* Low Priority */
-.card.border-success {
-  border-left: 5px solid #28a745;
-  background: linear-gradient(135deg, #2ecc71, #1abc9c);
+.card.bg-danger {
+  background: linear-gradient(135deg, #f687b3, #e53e3e);
   color: white;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .dashboard {
+    padding: 16px;
+  }
+
+  .dashboard-title {
+    font-size: 2rem;
+  }
+
+  .card-body {
+    padding: 16px;
+  }
+
+  .task-card {
+    margin-bottom: 16px;
+  }
 }

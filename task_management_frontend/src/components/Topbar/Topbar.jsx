@@ -12,7 +12,6 @@ const Topbar = ({ isOpen, toggle }) => {
     if (token) {
       try {
         const decoded = jwtDecode(token);
-        console.log("Decoded token:", decoded);
         setName(decoded.name || "User"); // Changed 'username' to 'name'
       } catch (err) {
         console.error("Error decoding token:", err);

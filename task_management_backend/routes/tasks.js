@@ -1,11 +1,10 @@
+
 // task-management-backend/routes/tasks.js
 const express = require('express');
 const router = express.Router();
 const Task = require('../models/Task');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-
+const Reminder = require('../models/Reminder');
 
 // Get all tasks with aggregated stats
 router.get('/', async (req, res) => {
@@ -46,19 +45,48 @@ router.get('/', async (req, res) => {
 
 // Create a new task
 router.post('/', async (req, res) => {
-  const task = new Task({
-    title: req.body.title,
-    description: req.body.description || '',
-    status: req.body.status || 'Pending',
-    priority: req.body.priority || 'Medium',
-    dueDate: req.body.dueDate || null,
-    assignedUser: req.body.assignedUser || '',
-    employeesAssigned: req.body.employeesAssigned || 1,
-    document: req.body.document || null,
-  });
-
   try {
+    // Validate assignedUsers
+    const { assignedUsers } = req.body;
+    if (assignedUsers && assignedUsers.length > 0) {
+      const users = await User.find({ name: { $in: assignedUsers } });
+      if (users.length !== assignedUsers.length) {
+        return res.status(400).json({ message: 'One or more assigned users not found' });
+      }
+    }
+
+    const task = new Task({
+      title: req.body.title,
+      description: req.body.description || '',
+      status: req.body.status || 'Pending',
+      priority: req.body.priority || 'Medium',
+      dueDate: req.body.dueDate || null,
+      assignedUsers: req.body.assignedUsers || [],
+      employeesAssigned: req.body.employeesAssigned || 0,
+      document: req.body.document || null,
+      category: req.body.category || '',
+    });
+
     const newTask = await task.save();
+
+    // Create reminders if dueDate is set
+    if (task.dueDate) {
+      const dueDate = new Date(task.dueDate);
+      const reminderDate = new Date(dueDate);
+      reminderDate.setDate(dueDate.getDate() - 1); // One day before
+
+      for (const user of task.assignedUsers) {
+        const reminder = new Reminder({
+          taskId: newTask._id,
+          user,
+          dueDate,
+          reminderDate,
+          message: `Task "${task.title}" is due tomorrow on ${dueDate.toLocaleDateString()}. Please complete it before the deadline.`,
+        });
+        await reminder.save();
+      }
+    }
+
     res.status(201).json(newTask);
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -72,6 +100,7 @@ router.delete('/:id', async (req, res) => {
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
+    await Reminder.deleteMany({ taskId: task._id }); // Delete associated reminders
     await task.deleteOne();
     res.json({ message: 'Task deleted' });
   } catch (err) {
@@ -79,27 +108,62 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// Update a task
 router.put('/:id', async (req, res) => {
   try {
     const task = await Task.findById(req.params.id);
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
-    Object.assign(task, req.body); // Update fields with new data
+
+    // Validate assignedUsers
+    const { assignedUsers } = req.body;
+    if (assignedUsers && assignedUsers.length > 0) {
+      const users = await User.find({ name: { $in: assignedUsers } });
+      if (users.length !== assignedUsers.length) {
+        return res.status(400).json({ message: 'One or more assigned users not found' });
+      }
+    }
+
+    // Update task
+    Object.assign(task, req.body);
     const updatedTask = await task.save();
+
+    // Update reminders if dueDate or assignedUsers changed
+    if (req.body.dueDate || req.body.assignedUsers) {
+      await Reminder.deleteMany({ taskId: task._id }); // Clear old reminders
+      if (task.dueDate) {
+        const dueDate = new Date(task.dueDate);
+        const reminderDate = new Date(dueDate);
+        reminderDate.setDate(dueDate.getDate() - 1);
+
+        for (const user of task.assignedUsers) {
+          const reminder = new Reminder({
+            taskId: task._id,
+            user,
+            dueDate,
+            reminderDate,
+            message: `Task "${task.title}" is due tomorrow on ${dueDate.toLocaleDateString()}. Please complete it before the deadline.`,
+          });
+          await reminder.save();
+        }
+      }
+    }
+
     res.json(updatedTask);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
 });
 
+// Get tasks by assigned user
 router.get('/mytasks', async (req, res) => {
   try {
     const { name } = req.query;
     if (!name) {
       return res.status(400).json({ message: 'Name query parameter is required' });
     }
-    const tasks = await Task.find({ assignedUser: name });
+    const tasks = await Task.find({ assignedUsers: name });
     res.json({ tasks });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -115,11 +179,11 @@ router.put('/mytasks/:id/complete', async (req, res) => {
     }
     task.status = 'Completed';
     const updatedTask = await task.save();
+    await Reminder.deleteMany({ taskId: task._id }); // Clear reminders on completion
     res.json(updatedTask);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
-
 
 module.exports = router;

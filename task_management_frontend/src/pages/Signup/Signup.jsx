@@ -1,4 +1,3 @@
-// src/pages/Signup/Signup.jsx
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from 'axios';
@@ -11,14 +10,13 @@ const SignUp = () => {
     password: "",
     confirmPassword: "",
   });
-  const [error, setError] = useState(null); // State for error popup
+  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
-  const [isLoading, setIsLoading] = useState(false);
-
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -34,7 +32,9 @@ const SignUp = () => {
         password: formData.password,
       });
       localStorage.setItem('token', response.data.token);
-      navigate("/login");
+      // Optionally store user data, including role
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+      navigate("/login"); // Or redirect based on role if needed
     } catch (err) {
       setError(err.response?.data?.message || "Failed to sign up. Please try again.");
     } finally {
@@ -43,7 +43,7 @@ const SignUp = () => {
   };
 
   const closePopup = () => {
-    setError(null); // Clear error and close popup
+    setError(null);
   };
 
   return (
@@ -53,19 +53,47 @@ const SignUp = () => {
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Name</label>
-            <input type="text" name="name" value={formData.name} onChange={handleChange} required />
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              className="signup-input"
+            />
           </div>
           <div className="form-group">
             <label>Email</label>
-            <input type="email" name="email" value={formData.email} onChange={handleChange} required />
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              className="signup-input"
+            />
           </div>
           <div className="form-group">
             <label>Password</label>
-            <input type="password" name="password" value={formData.password} onChange={handleChange} required />
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              className="signup-input"
+            />
           </div>
           <div className="form-group">
             <label>Confirm Password</label>
-            <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} required />
+            <input
+              type="password"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              required
+              className="signup-input"
+            />
           </div>
           <button type="submit" className="btn-primary" disabled={isLoading}>
             {isLoading ? "Signing Up..." : "Sign Up"}
@@ -76,7 +104,6 @@ const SignUp = () => {
         </p>
       </div>
 
-      {/* Error Popup */}
       {error && (
         <div className="error-popup-overlay">
           <div className="error-popup">

@@ -1,10 +1,25 @@
-// src/components/Sidebar/Sidebar.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiMenu, FiX } from "react-icons/fi";
-import "./Sidebar.css";
 import { NavLink } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
+import "./Sidebar.css";
 
 const Sidebar = ({ isOpen, toggle }) => {
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    // Check if user is admin
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        setIsAdmin(decoded.role === 'Admin');
+      } catch (err) {
+        console.error('Error decoding token:', err);
+      }
+    }
+  }, []);
+
   return (
     <div className='sidebar-container'>
       <button className={`sidebar-toggle ${isOpen ? "shifted" : ""}`} onClick={toggle}>
@@ -15,32 +30,34 @@ const Sidebar = ({ isOpen, toggle }) => {
         <ul className='sidebar-menu'>
           <NavLink
             to="/dashboard"
-            end // Add this to ensure exact match
+            end
             className={({ isActive }) => (isActive ? "active" : "")}
             style={{ textDecoration: 'none', color: 'white' }}
           >
-            <li>Home</li>
+            <li className="text-wrap">Home</li>
           </NavLink>
           <NavLink
             to="/dashboard/view-tasks"
             className={({ isActive }) => (isActive ? "active" : "")}
             style={{ textDecoration: 'none', color: 'white' }}
           >
-            <li>Tasks</li>
+            <li className="text-wrap">Tasks</li>
           </NavLink>
-          <NavLink
-            to="/dashboard/users"
-            className={({ isActive }) => (isActive ? "active" : "")}
-            style={{ textDecoration: 'none', color: 'white' }}
-          >
-            <li>Users</li>
-          </NavLink>
+          {isAdmin && (
+            <NavLink
+              to="/dashboard/users"
+              className={({ isActive }) => (isActive ? "active" : "")}
+              style={{ textDecoration: 'none', color: 'white' }}
+            >
+              <li className="text-wrap">Users</li>
+            </NavLink>
+          )}
           <NavLink
             to="/dashboard/mytasks"
             className={({ isActive }) => (isActive ? "active" : "")}
             style={{ textDecoration: 'none', color: 'white' }}
           >
-            <li>My Tasks</li>
+            <li className="text-wrap">My Tasks</li>
           </NavLink>
         </ul>
       </div>
