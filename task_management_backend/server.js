@@ -1,5 +1,5 @@
 // task-management-backend/server.js
-require('dotenv').config(); // Load environment variables
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -8,7 +8,12 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173', // Explicitly allow frontend origin
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true, // Allow cookies or auth headers if needed
+}));
 app.use(express.json());
 
 // MongoDB Atlas Connection

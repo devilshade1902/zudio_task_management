@@ -1,8 +1,11 @@
+// src/pages/Tasks/ViewTasks.jsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { FaTrash, FaEdit, FaPlus } from 'react-icons/fa';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { jwtDecode } from 'jwt-decode';
 import "./ViewTasks.css";
+import Select from 'react-select';
 
 const ViewTasks = () => {
   const [tasks, setTasks] = useState({
@@ -14,15 +17,32 @@ const ViewTasks = () => {
   const [selectedTask, setSelectedTask] = useState(null);
   const [isNewTask, setIsNewTask] = useState(false);
   const [users, setUsers] = useState(["None"]);
-  const [loading, setLoading] = useState(true); // New loading state
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        setIsAdmin(decoded.role === 'Admin');
+      } catch (err) {
+        console.error('Error decoding token:', err);
+        setError('Invalid authentication token');
+      }
+    }
+  }, []);
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get('http://localhost:5001/api/users');
-      setUsers(response.data.map(user => user.name));
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5001/api/users', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUsers([...response.data.map(user => user.name), "None"]);
     } catch (err) {
-      console.error('Error fetching users:', err);
-      alert("Failed to load users. Please try again.");
+      console.error('Error fetching users:', err.response?.data?.message || err.message);
     }
   };
 
@@ -36,23 +56,30 @@ const ViewTasks = () => {
       };
       response.data.tasks.forEach(task => {
         if (tasksByStatus[task.status]) {
-          tasksByStatus[task.status].push(task);
+          tasksByStatus[task.status].push({
+            ...task,
+            assignedUsers: task.assignedUsers || (task.assignedUser ? [task.assignedUser] : []), // Handle legacy assignedUser
+          });
         }
       });
       setTasks(tasksByStatus);
     } catch (err) {
-      console.error('Error fetching tasks:', err);
+      console.error('Error fetching tasks:', err.response?.data?.message || err.message);
+      setError('Failed to load tasks. Please try again.');
     }
   };
 
   useEffect(() => {
     const loadData = async () => {
-      setLoading(true); // Start loading
-      await Promise.all([fetchUsers(), fetchTasks()]); // Fetch both users and tasks
-      setLoading(false); // Stop loading when both are done
+      setLoading(true);
+      await Promise.all([
+        fetchTasks(),
+        isAdmin ? fetchUsers() : Promise.resolve(),
+      ]);
+      setLoading(false);
     };
     loadData();
-  }, []);
+  }, [isAdmin]);
 
   const handleDelete = async (taskId, status) => {
     if (window.confirm("Are you sure you want to delete this task?")) {
@@ -64,13 +91,16 @@ const ViewTasks = () => {
         }));
       } catch (err) {
         console.error('Error deleting task:', err);
-        alert("Failed to delete task. Please try again.");
+        setError('Failed to delete task. Please try again.');
       }
     }
   };
 
   const handleEdit = (task) => {
-    setSelectedTask(task);
+    setSelectedTask({
+      ...task,
+      assignedUsers: task.assignedUsers || (task.assignedUser ? [task.assignedUser] : []), // Handle legacy assignedUser
+    });
     setIsNewTask(false);
     setIsModalOpen(true);
   };
@@ -82,9 +112,10 @@ const ViewTasks = () => {
       status: "Pending",
       priority: "Medium",
       dueDate: "",
-      assignedUser: "",
-      employeesAssigned: 1,
-      document: null
+      assignedUsers: [],
+      employeesAssigned: 0,
+      document: null,
+      category: ""
     });
     setIsNewTask(true);
     setIsModalOpen(true);
@@ -93,6 +124,14 @@ const ViewTasks = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setSelectedTask(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleUsersChange = (e) => {
+    const selected = Array.from(e.target.selectedOptions, option => option.value);
+    setSelectedTask(prev => ({
+      ...prev,
+      assignedUsers: selected.filter(v => v !== "None")
+    }));
   };
 
   const handleFileChange = (e) => {
@@ -114,16 +153,18 @@ const ViewTasks = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const taskData = { ...selectedTask };
+      delete taskData.assignedUser; // Remove legacy field
       if (isNewTask) {
-        await axios.post('http://localhost:5001/api/tasks', selectedTask);
+        await axios.post('http://localhost:5001/api/tasks', taskData);
       } else {
-        await axios.put(`http://localhost:5001/api/tasks/${selectedTask._id}`, selectedTask);
+        await axios.put(`http://localhost:5001/api/tasks/${selectedTask._id}`, taskData);
       }
       setIsModalOpen(false);
       fetchTasks();
     } catch (err) {
       console.error('Error saving task:', err);
-      alert(`Failed to ${isNewTask ? 'create' : 'update'} task. Please try again.`);
+      setError(`Failed to ${isNewTask ? 'create' : 'update'} task. Please try again.`);
     }
   };
 
@@ -147,9 +188,12 @@ const ViewTasks = () => {
     }));
 
     try {
-      await axios.put(`http://localhost:5001/api/tasks/${movedTask._id}`, updatedTask);
+      const taskData = { ...updatedTask };
+      delete taskData.assignedUser; // Remove legacy field
+      await axios.put(`http://localhost:5001/api/tasks/${movedTask._id}`, taskData);
     } catch (err) {
       console.error('Error updating task status:', err);
+      setError('Failed to update task status.');
       fetchTasks();
     }
   };
@@ -160,6 +204,15 @@ const ViewTasks = () => {
         <div className="loader">
           <div className="spinner"></div>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="kanban-container error">
+        <p>{error}</p>
+        <button onClick={() => { setError(null); fetchTasks(); }}>Retry</button>
       </div>
     );
   }
@@ -209,11 +262,12 @@ const ViewTasks = () => {
                                 <button onClick={() => handleDelete(task._id, status)}><FaTrash /></button>
                               </div>
                             </div>
-                            <p>{task.description || "No description"}</p>
+                            <p className="task-description">{task.description || "No description"}</p>
                             <p><strong>Priority:</strong> {task.priority}</p>
                             <p><strong>Due:</strong> {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "Not set"}</p>
-                            <p><strong>Assigned:</strong> {task.assignedUser || "Not assigned"}</p>
+                            <p><strong>Assigned:</strong> {task.assignedUsers.length > 0 ? task.assignedUsers.join(', ') : "Not assigned"}</p>
                             <p><strong>Employees:</strong> {task.employeesAssigned}</p>
+                            <p><strong>Category:</strong> {task.category || "None"}</p>
                           </div>
                         )}
                       </Draggable>
@@ -270,12 +324,16 @@ const ViewTasks = () => {
                 </div>
                 <div className="form-group">
                   <label>Assign To</label>
-                  <select name="assignedUser" value={selectedTask.assignedUser} onChange={handleInputChange}>
-                    <option value="">Select User</option>
-                    {users.map((user, index) => (
-                      <option key={index} value={user}>{user}</option>
-                    ))}
-                  </select>
+                  <Select
+                    isMulti
+                    options={users.filter(user => user !== "None").map(user => ({ value: user, label: user }))}
+                    value={selectedTask.assignedUsers.map(user => ({ value: user, label: user }))}
+                    onChange={selected => setSelectedTask(prev => ({
+                      ...prev,
+                      assignedUsers: selected.map(opt => opt.value)
+                    }))}
+                    isDisabled={!isAdmin}
+                  />
                 </div>
                 <div className="form-group">
                   <label>Employees Assigned</label>
@@ -284,7 +342,7 @@ const ViewTasks = () => {
                     name="employeesAssigned"
                     value={selectedTask.employeesAssigned}
                     onChange={handleInputChange}
-                    min="1"
+                    min="0"
                   />
                 </div>
                 <div className="form-group">
@@ -292,11 +350,23 @@ const ViewTasks = () => {
                   <input type="file" accept=".pdf,.docx,.png,.jpg" onChange={handleFileChange} />
                   {selectedTask.document && <p>Current: {selectedTask.document}</p>}
                 </div>
+                {isAdmin && (
+                  <div className="form-group">
+                    <label>Category</label>
+                    <input
+                      type="text"
+                      name="category"
+                      value={selectedTask.category || ""}
+                      onChange={handleInputChange}
+                      placeholder="e.g., Development, Design"
+                    />
+                  </div>
+                )}
                 <div className="form-group full-width">
                   <label>Description</label>
                   <textarea
                     name="description"
-                    value={selectedTask.description}
+                    value={selectedTask.description || ""}
                     onChange={handleInputChange}
                   />
                 </div>

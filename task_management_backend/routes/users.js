@@ -4,6 +4,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { auth, restrictTo } = require('../middleware/auth');
 
 // Signup route
 router.post('/signup', async (req, res) => {
@@ -26,9 +27,13 @@ router.post('/signup', async (req, res) => {
 
     await user.save();
 
-    const token = jwt.sign({ id: user._id }, 'your_jwt_secret', { expiresIn: '1h' });
+    const token = jwt.sign(
+      { id: user._id, name: user.name, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
 
-    res.status(201).json({ token, user: { id: user._id, name, email } });
+    res.status(201).json({ token, user: { id: user._id, name, email, role: user.role } });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -49,29 +54,55 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Include 'name' in the token payload instead of 'username'
     const token = jwt.sign(
-      { id: user._id, name: user.name }, // Changed 'username' to 'name'
+      { id: user._id, name: user.name, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '15m' }
     );
-    res.json({ 
-      token, 
-      user: { id: user._id, name: user.name, email: user.email } 
+    res.json({
+      token,
+      user: { id: user._id, name: user.name, email: user.email, role: user.role }
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-router.get('/', async (req, res) => {
+// Get all users (admin-only)
+router.get('/', auth, restrictTo('Admin'), async (req, res) => {
   try {
-    const users = await User.find().select('-password'); // Exclude password field
+    const users = await User.find().select('-password');
     res.json(users);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
+// Update user role (admin-only)
+router.put('/:id/role', auth, restrictTo('Admin'), async (req, res) => {
+  const { role } = req.body;
+
+  if (!['User', 'Admin'].includes(role)) {
+    return res.status(400).json({ message: 'Invalid role' });
+  }
+
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user._id.equals(req.user.id) && role !== 'Admin') {
+      return res.status(403).json({ message: 'Cannot change your own role' });
+    }
+
+    user.role = role;
+    await user.save();
+
+    res.json({ message: 'Role updated', user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 module.exports = router;
