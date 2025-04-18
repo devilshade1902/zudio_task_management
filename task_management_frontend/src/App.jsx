@@ -8,6 +8,7 @@ import SignUp from "./pages/Signup/Signup";
 import ViewTasks from "./pages/ViewTasks/Viewtasks";
 import Users from "./pages/Users/Users";
 import MyTasks from "./pages/MyTasks/MyTasks";
+import MeetingCard from "./pages/Meetings/MeetingCard";
 
 function App() {
   
@@ -22,6 +23,7 @@ function App() {
           <Route path="view-tasks" element={<ViewTasks />} /> 
           <Route path="users" element={<Users />} /> 
           <Route path="mytasks" element={<MyTasks />} /> 
+          <Route path="meetings" element={<MeetingCard />} />
         </Route>
       </Routes>
     </BrowserRouter>
