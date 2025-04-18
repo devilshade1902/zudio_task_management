@@ -1,15 +1,27 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { jwtDecode } from "jwt-decode";
 import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
-import "./MeetingCard.css"; // You can rename this to MeetingCard.css later if needed
+import "./MeetingCard.css";
 
 const MeetingCard = () => {
   const [meetings, setMeetings] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedMeeting, setSelectedMeeting] = useState(null);
   const [isNewMeeting, setIsNewMeeting] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        setIsAdmin(decoded.role === "Admin");
+      } catch (err) {
+        console.error("Token decoding failed", err);
+      }
+    }
+
     fetchMeetings();
   }, []);
 
@@ -55,20 +67,20 @@ const MeetingCard = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     try {
       let meetingData = { ...selectedMeeting };
-
       if (isNewMeeting) {
-        // Zoom Meeting creation logic
-        const accessToken = 'YOUR_ZOOM_ACCESS_TOKEN'; // Replace with dynamic retrieval or OAuth
-        const zoomResponse = await axios.post('http://localhost:5001/api/zoom/create-meeting', {
-          accessToken,
-          topic: selectedMeeting.title,
-          description: selectedMeeting.description,
-          startTime: `${selectedMeeting.date}T${selectedMeeting.time}`,
-          duration: selectedMeeting.duration || 30,
-        });
+        const accessToken = "YOUR_ZOOM_ACCESS_TOKEN"; // Replace accordingly
+        const zoomResponse = await axios.post(
+          "http://localhost:5001/api/zoom/create-meeting",
+          {
+            accessToken,
+            topic: selectedMeeting.title,
+            description: selectedMeeting.description,
+            startTime: `${selectedMeeting.date}T${selectedMeeting.time}`,
+            duration: selectedMeeting.duration || 30,
+          }
+        );
 
         meetingData.link = zoomResponse.data.join_url;
         await axios.post("http://localhost:5001/api/meetings", meetingData);
@@ -90,9 +102,11 @@ const MeetingCard = () => {
     <div className="meetings-container">
       <div className="meetings-header">
         <h2>Meetings</h2>
-        <button className="add-meeting-btn" onClick={handleAddNewMeeting}>
-          <FaPlus /> Create Meeting
-        </button>
+        {isAdmin && (
+          <button className="add-meeting-btn" onClick={handleAddNewMeeting}>
+            <FaPlus /> Create Meeting
+          </button>
+        )}
       </div>
 
       <div className="meeting-list">
@@ -100,20 +114,36 @@ const MeetingCard = () => {
           <div key={meeting._id} className="meeting-card">
             <div className="card-header">
               <h4>{meeting.title}</h4>
-              <div className="card-actions">
-                <button onClick={() => handleEdit(meeting)}><FaEdit /></button>
-                <button onClick={() => handleDelete(meeting._id)}><FaTrash /></button>
-              </div>
+              {isAdmin && (
+                <div className="card-actions">
+                  <button onClick={() => handleEdit(meeting)}>
+                    <FaEdit />
+                  </button>
+                  <button onClick={() => handleDelete(meeting._id)}>
+                    <FaTrash />
+                  </button>
+                </div>
+              )}
             </div>
             <p>{meeting.description}</p>
-            <p><strong>Date:</strong> {new Date(meeting.date).toLocaleDateString()}</p>
-            <p><strong>Time:</strong> {meeting.time}</p>
-            <p><strong>Link:</strong> <a href={meeting.link} target="_blank" rel="noreferrer">{meeting.link}</a></p>
+            <p>
+              <strong>Date:</strong>{" "}
+              {new Date(meeting.date).toLocaleDateString()}
+            </p>
+            <p>
+              <strong>Time:</strong> {meeting.time}
+            </p>
+            <p>
+              <strong>Link:</strong>{" "}
+              <a href={meeting.link} target="_blank" rel="noreferrer">
+                {meeting.link}
+              </a>
+            </p>
           </div>
         ))}
       </div>
 
-      {isModalOpen && (
+      {isAdmin && isModalOpen && (
         <div className="modal">
           <form onSubmit={handleSubmit} className="modal-content">
             <h3>{isNewMeeting ? "Create Zoom Meeting" : "Edit Meeting"}</h3>
@@ -165,7 +195,9 @@ const MeetingCard = () => {
             )}
             <div className="modal-actions">
               <button type="submit">{isNewMeeting ? "Create" : "Update"}</button>
-              <button type="button" onClick={() => setIsModalOpen(false)}>Cancel</button>
+              <button type="button" onClick={() => setIsModalOpen(false)}>
+                Cancel
+              </button>
             </div>
           </form>
         </div>
