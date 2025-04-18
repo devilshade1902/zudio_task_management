@@ -114,6 +114,51 @@
   color: white;
 }
 
+/* Flex container for pie chart section */
+.pie-chart-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Inner flex to align pie and labels side by side */
+.pie-chart-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 100%;
+}
+
+/* Limit pie chart size */
+.pie-chart-canvas {
+  width: 50%;
+  max-height: 300px;
+}
+
+/* Legend next to pie chart */
+.pie-chart-legend {
+  width: 45%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Legend item styling */
+.legend-item {
+  display: flex;
+  align-items: center;
+  font-size: 0.95rem;
+  color: #2d3748;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  margin-right: 8px;
+  border-radius: 50%;
+}
+
+
 /* Responsive Adjustments */
 @media (max-width: 768px) {
   .dashboard {
