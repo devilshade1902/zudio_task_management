@@ -59,6 +59,13 @@ const Sidebar = ({ isOpen, toggle }) => {
           >
             <li className="text-wrap">My Tasks</li>
           </NavLink>
+          <NavLink
+            to="/dashboard/meetings"
+            className={({ isActive }) => (isActive ? "active" : "")}
+            style={{ textDecoration: 'none', color: 'white' }}
+          >
+            <li className="text-wrap">Meetings</li>
+          </NavLink>
         </ul>
       </div>
     </div>
