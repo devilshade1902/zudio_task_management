@@ -98,6 +98,24 @@
   border-color: #52c41a;
 }
 
+.delete-icon {
+  color: #dc3545;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.delete-icon:hover {
+  color: #a71d2a;
+  transform: scale(1.2);
+}
+
+.disabled-icon {
+  color: #6c757d;
+  font-size: 1.2rem;
+  cursor: not-allowed;
+}
+
 .no-users {
   text-align: center;
   color: #6c757d;

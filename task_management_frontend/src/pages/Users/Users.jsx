@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from 'axios';
-import { FaSearch, FaSpinner } from 'react-icons/fa';
+import { FaSearch, FaSpinner, FaTrash } from 'react-icons/fa';
 import { jwtDecode } from 'jwt-decode';
 import "./Users.css";
 
@@ -11,14 +11,16 @@ const Users = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   useEffect(() => {
-    // Check if user is admin
+    // Check if user is admin and get current user ID
     const token = localStorage.getItem('token');
     if (token) {
       try {
         const decoded = jwtDecode(token);
         setIsAdmin(decoded.role === 'Admin');
+        setCurrentUserId(decoded.id);
       } catch (err) {
         console.error('Error decoding token:', err);
         setError('Invalid token. Please log in again.');
@@ -56,7 +58,7 @@ const Users = () => {
     setSearchTerm(term);
     const filtered = users.filter(
       user =>
-        user.name.toLowerCase().includes(term) || // Changed 'username' to 'name'
+        user.name.toLowerCase().includes(term) ||
         user.email.toLowerCase().includes(term)
     );
     setFilteredUsers(filtered);
@@ -80,6 +82,25 @@ const Users = () => {
     } catch (err) {
       console.error('Error updating role:', err);
       alert(err.response?.data?.message || 'Failed to update role');
+    }
+  };
+
+  const handleDeleteUser = async (userId, userName) => {
+    if (!window.confirm(`Are you sure you want to delete user "${userName}"?`)) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`http://localhost:5001/api/users/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUsers(users.filter(user => user._id !== userId));
+      setFilteredUsers(filteredUsers.filter(user => user._id !== userId));
+      alert(`User "${userName}" deleted successfully`);
+    } catch (err) {
+      console.error('Error deleting user:', err);
+      alert(err.response?.data?.message || 'Failed to delete user');
     }
   };
 
@@ -127,6 +148,7 @@ const Users = () => {
                 <th>Email</th>
                 <th>Role</th>
                 <th>Created At</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -145,6 +167,22 @@ const Users = () => {
                     </select>
                   </td>
                   <td className="text-wrap">{new Date(user.createdAt).toLocaleDateString()}</td>
+                  <td>
+                    {user._id !== currentUserId ? (
+                      <FaTrash
+                        className="delete-icon"
+                        onClick={() => handleDeleteUser(user._id, user.name)}
+                        title={`Delete ${user.name}`}
+                      />
+                    ) : (
+                      <span
+                        className="disabled-icon"
+                        title="Cannot delete own account"
+                      >
+                        —
+                      </span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

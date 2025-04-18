@@ -1,4 +1,3 @@
-// task-management-backend/routes/users.js
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
@@ -100,6 +99,25 @@ router.put('/:id/role', auth, restrictTo('Admin'), async (req, res) => {
     await user.save();
 
     res.json({ message: 'Role updated', user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Delete user (admin-only)
+router.delete('/:id', auth, restrictTo('Admin'), async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user._id.equals(req.user.id)) {
+      return res.status(403).json({ message: 'Cannot delete your own account' });
+    }
+
+    await User.deleteOne({ _id: req.params.id });
+    res.json({ message: 'User deleted successfully' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
