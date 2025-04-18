@@ -1,10 +1,9 @@
-
-// task-management-backend/routes/tasks.js
 const express = require('express');
 const router = express.Router();
 const Task = require('../models/Task');
 const User = require('../models/User');
 const Reminder = require('../models/Reminder');
+const { auth, restrictTo } = require('../middleware/auth');
 
 // Get all tasks with aggregated stats
 router.get('/', async (req, res) => {
@@ -43,8 +42,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Create a new task
-router.post('/', async (req, res) => {
+// Create a new task (admin-only)
+router.post('/', auth, restrictTo('Admin'), async (req, res) => {
   try {
     // Validate assignedUsers
     const { assignedUsers } = req.body;
@@ -73,7 +72,7 @@ router.post('/', async (req, res) => {
     if (task.dueDate) {
       const dueDate = new Date(task.dueDate);
       const reminderDate = new Date(dueDate);
-      reminderDate.setDate(dueDate.getDate() - 1); // One day before
+      reminderDate.setDate(dueDate.getDate() - 1);
 
       for (const user of task.assignedUsers) {
         const reminder = new Reminder({
@@ -93,14 +92,14 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Delete a task
-router.delete('/:id', async (req, res) => {
+// Delete a task (admin-only)
+router.delete('/:id', auth, restrictTo('Admin'), async (req, res) => {
   try {
     const task = await Task.findById(req.params.id);
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
-    await Reminder.deleteMany({ taskId: task._id }); // Delete associated reminders
+    await Reminder.deleteMany({ taskId: task._id });
     await task.deleteOne();
     res.json({ message: 'Task deleted' });
   } catch (err) {
@@ -108,30 +107,58 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// Update a task
-router.put('/:id', async (req, res) => {
+// Update a task (admin or assigned user for status only)
+router.put('/:id', auth, async (req, res) => {
   try {
     const task = await Task.findById(req.params.id);
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
 
-    // Validate assignedUsers
-    const { assignedUsers } = req.body;
-    if (assignedUsers && assignedUsers.length > 0) {
-      const users = await User.find({ name: { $in: assignedUsers } });
-      if (users.length !== assignedUsers.length) {
+    const isAdmin = req.user.role === 'Admin';
+    const isAssigned = task.assignedUsers.includes(req.user.name);
+
+    if (!isAdmin && !isAssigned) {
+      return res.status(403).json({ message: 'Not authorized to update this task' });
+    }
+
+    // Validate inputs
+    if (req.body.status && !['Pending', 'In Progress', 'Completed'].includes(req.body.status)) {
+      return res.status(400).json({ message: 'Invalid status value' });
+    }
+    if (req.body.priority && !['High', 'Medium', 'Low'].includes(req.body.priority)) {
+      return res.status(400).json({ message: 'Invalid priority value' });
+    }
+    if (req.body.assignedUsers && req.body.assignedUsers.length > 0) {
+      const users = await User.find({ name: { $in: req.body.assignedUsers } });
+      if (users.length !== req.body.assignedUsers.length) {
         return res.status(400).json({ message: 'One or more assigned users not found' });
       }
     }
 
-    // Update task
-    Object.assign(task, req.body);
+    // Update fields based on role
+    if (!isAdmin) {
+      if (Object.keys(req.body).some(key => key !== 'status')) {
+        return res.status(403).json({ message: 'Non-admins can only update task status' });
+      }
+      task.status = req.body.status;
+    } else {
+      task.title = req.body.title || task.title;
+      task.description = req.body.description ?? task.description;
+      task.status = req.body.status || task.status;
+      task.priority = req.body.priority || task.priority;
+      task.dueDate = req.body.dueDate ?? task.dueDate;
+      task.assignedUsers = req.body.assignedUsers || task.assignedUsers;
+      task.employeesAssigned = req.body.employeesAssigned ?? task.employeesAssigned;
+      task.document = req.body.document ?? task.document;
+      task.category = req.body.category ?? task.category;
+    }
+
     const updatedTask = await task.save();
 
     // Update reminders if dueDate or assignedUsers changed
-    if (req.body.dueDate || req.body.assignedUsers) {
-      await Reminder.deleteMany({ taskId: task._id }); // Clear old reminders
+    if (isAdmin && (req.body.dueDate || req.body.assignedUsers)) {
+      await Reminder.deleteMany({ taskId: task._id });
       if (task.dueDate) {
         const dueDate = new Date(task.dueDate);
         const reminderDate = new Date(dueDate);
@@ -179,7 +206,7 @@ router.put('/mytasks/:id/complete', async (req, res) => {
     }
     task.status = 'Completed';
     const updatedTask = await task.save();
-    await Reminder.deleteMany({ taskId: task._id }); // Clear reminders on completion
+    await Reminder.deleteMany({ taskId: task._id });
     res.json(updatedTask);
   } catch (err) {
     res.status(500).json({ message: err.message });

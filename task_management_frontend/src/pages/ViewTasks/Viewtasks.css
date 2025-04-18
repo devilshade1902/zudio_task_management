@@ -236,6 +236,12 @@
   animation: spin 1s linear infinite;
 }
 
+.kanban-board.read-only .task-card {
+  cursor: default; /* Prevent drag-like cursor */
+  background: #f9f9f9; /* Slightly different background to indicate read-only */
+}
+
+
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
