@@ -8,6 +8,7 @@ const meetingSchema = new mongoose.Schema({
   time: { type: String, required: true },
   duration: { type: Number }, // in minutes
   link: { type: String }, // Zoom link
+  start_url: {type: String},
 });
 
 const Meeting = mongoose.model('Meeting', meetingSchema);

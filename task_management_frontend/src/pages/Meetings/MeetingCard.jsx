@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
+import ZoomMtgEmbedded from "@zoom/meetingsdk/embedded";
 import "./MeetingCard.css";
 
 const MeetingCard = () => {
@@ -34,6 +35,16 @@ const MeetingCard = () => {
     }
   };
 
+  const handleEnterLobby = (meeting, isAdmin) => {
+    const meetingNumber = extractMeetingNumber(meeting.link);
+    const passcode = extractPasscode(meeting.link);
+    const role = isAdmin ? 1 : 0;
+  
+    const lobbyUrl = `/meeting-lobby?meetingNumber=${meetingNumber}&passcode=${passcode}&role=${role}`;
+    
+    window.open(lobbyUrl, "_blank");
+  };
+  
   const handleAddNewMeeting = () => {
     setSelectedMeeting({
       title: "",
@@ -70,11 +81,9 @@ const MeetingCard = () => {
     try {
       let meetingData = { ...selectedMeeting };
       if (isNewMeeting) {
-        const accessToken = "YOUR_ZOOM_ACCESS_TOKEN"; // Replace accordingly
         const zoomResponse = await axios.post(
           "http://localhost:5001/api/zoom/create-meeting",
           {
-            accessToken,
             topic: selectedMeeting.title,
             description: selectedMeeting.description,
             startTime: `${selectedMeeting.date}T${selectedMeeting.time}`,
@@ -83,6 +92,8 @@ const MeetingCard = () => {
         );
 
         meetingData.link = zoomResponse.data.join_url;
+        meetingData.start_url = zoomResponse.data.start_url;
+
         await axios.post("http://localhost:5001/api/meetings", meetingData);
       } else {
         await axios.put(
@@ -98,6 +109,73 @@ const MeetingCard = () => {
     }
   };
 
+  const extractMeetingNumber = (link) => {
+    const match = link.match(/\/j\/(\d+)|\/s\/(\d+)/);
+    return match ? match[1] || match[2] : "";
+  };
+
+  const extractPasscode = (link) => {
+    try {
+      const url = new URL(link);
+      return url.searchParams.get("pwd") || "";
+    } catch (err) {
+      console.error("Failed to extract passcode from link", err);
+      return "";
+    }
+  };
+
+  const handleJoinMeeting = async (meeting, isAdmin) => {
+    const client = ZoomMtgEmbedded.createClient();
+    const meetingSDKElement = document.getElementById("meetingSDKElement");
+  
+    try {
+      const meetingNumber = extractMeetingNumber(meeting.link);
+      const passcode = extractPasscode(meeting.link);
+  
+      // Choose the correct role (1 for host, 0 for attendee)
+      const role = isAdmin ? 1 : 0; // Admin is host (role 1), user is attendee (role 0)
+  
+      const res = await fetch("http://localhost:5001/api/zoom/generate-signature", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          meetingNumber,
+          role, // Pass the role correctly
+        }),
+      });
+  
+      const data = await res.json();
+  
+      client
+        .init({
+          zoomAppRoot: meetingSDKElement,
+          language: "en-US",
+          patchJsMedia: true,
+        })
+        .then(() => {
+          client
+            .join({
+              sdkKey: import.meta.env.VITE_ZOOM_SDK_KEY,
+              signature: data.signature,
+              meetingNumber,
+              password: passcode,
+              userName: meeting.userName || "Guest",
+            })
+            .then(() => {
+              console.log("Joined successfully");
+            })
+            .catch((error) => {
+              console.error("Failed to join the meeting", error);
+            });
+        })
+        .catch((error) => {
+          console.error("Failed to initialize the client", error);
+        });
+    } catch (err) {
+      console.error("Error joining Zoom SDK meeting", err);
+    }
+  };
+  
   return (
     <div className="meetings-container">
       <div className="meetings-header">
@@ -135,10 +213,20 @@ const MeetingCard = () => {
             </p>
             <p>
               <strong>Link:</strong>{" "}
-              <a href={meeting.link} target="_blank" rel="noreferrer">
-                {meeting.link}
+              <a
+                href={isAdmin ? meeting.start_url : meeting.link}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {isAdmin ? "Start Meeting" : "Join Meeting"}
               </a>
             </p>
+            <button
+              className="sdk-join-btn"
+              onClick={() => handleEnterLobby(meeting, isAdmin)}
+            >
+              Enter Meeting Lobby
+            </button>
           </div>
         ))}
       </div>
@@ -202,6 +290,9 @@ const MeetingCard = () => {
           </form>
         </div>
       )}
+
+      {/* Zoom Embedded SDK mount point */}
+      <div id="meetingSDKElement" style={{ width: "100%", height: "600px", marginTop: "2rem" }}></div>
     </div>
   );
 };

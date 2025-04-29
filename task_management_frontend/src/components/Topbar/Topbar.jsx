@@ -36,7 +36,7 @@ const Topbar = ({ isOpen, toggle }) => {
           <CgProfile className="profile-icon" size={28} />
           <span className="username">Welcome {name}</span> {/* Updated to use 'name' */}
         </div>
-        <Link to="/login" onClick={handleSignOut}>
+        <Link to="/" onClick={handleSignOut}>
           Sign Out
         </Link>
       </nav>

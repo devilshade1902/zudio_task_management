@@ -13,6 +13,7 @@
     "@hello-pangea/dnd": "^18.0.1",
     "@zoom/meetingsdk": "^3.13.0",
     "axios": "^1.8.4",
+    "boxicons": "^2.1.4",
     "chart.js": "^4.4.8",
     "firebase": "^11.5.0",
     "jwt-decode": "^4.0.0",

@@ -1,17 +1,23 @@
 .meetings-container {
-    padding: 20px;
-  }
+  padding: 20px;
+  width: 100%;
+  box-sizing: border-box; /* ensures padding doesn't overflow */
+}
   
   .meetings-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: relative;
   }
   
   .add-meeting-btn {
+    position: absolute;
+    right: 0;
+    top: 0;
     background-color: #0c056d;
     color: white;
-    padding: 8px 12px;
+    padding: 8px 16px;
     border: none;
     border-radius: 5px;
     display: flex;

@@ -9,15 +9,19 @@ import ViewTasks from "./pages/ViewTasks/Viewtasks";
 import Users from "./pages/Users/Users";
 import MyTasks from "./pages/MyTasks/MyTasks";
 import MeetingCard from "./pages/Meetings/MeetingCard";
+import MeetingLobby from "./pages/Meetings/MeetingLobby";
+import LoginSignup from "./pages/LoginSignup/LoginSignup";
 
 function App() {
   
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Login />} />  {/* Default page is Login */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<SignUp />} />
+        {/* <Route path="/" element={<Login />} />  Default page is Login */}
+        <Route path="/" element={<LoginSignup />} />
+        {/* <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<SignUp />} /> */}
+        <Route path="/meeting-lobby" element={<MeetingLobby />} />
         <Route path="/dashboard" element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="view-tasks" element={<ViewTasks />} /> 
