@@ -35,10 +35,12 @@ const Topbar = ({ isOpen, toggle }) => {
       } catch (err) {
         console.error('Error decoding token:', err);
         setName('Guest');
+        setNotifications([]);
       }
     } else {
       console.log('No token found, setting name to Guest');
       setName('Guest');
+      setNotifications([]);
     }
 
     socket.on('connect', () => {
@@ -79,6 +81,7 @@ const Topbar = ({ isOpen, toggle }) => {
       const token = localStorage.getItem('token');
       if (!token) {
         console.log('No token, skipping fetchNotifications');
+        setNotifications([]);
         return;
       }
       console.log('Fetching notifications for user:', userName);
@@ -119,16 +122,18 @@ const Topbar = ({ isOpen, toggle }) => {
   };
 
   const handleSignOut = () => {
-    console.log('Signing out, clearing token');
+    console.log('Signing out, clearing token and dismissed notifications');
     localStorage.removeItem('token');
+    localStorage.removeItem('dismissedNotificationIds');
     setName('Guest');
+    setNotifications([]);
   };
 
   const toggleNotifications = () => {
     setShowNotifications((prev) => !prev);
   };
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const notificationCount = notifications.length;
 
   return (
     <div className={`topbar ${isOpen ? 'shifted' : ''}`}>
@@ -137,8 +142,8 @@ const Topbar = ({ isOpen, toggle }) => {
         <Link to="/dashboard">Admin Dashboard</Link>
         <div className="notification-icon-container">
           <FaBell className="bell-icon" onClick={toggleNotifications} />
-          {unreadCount > 0 && (
-            <span className="notification-badge">{unreadCount}</span>
+          {notificationCount > 0 && (
+            <span className="notification-badge">{notificationCount}</span>
           )}
         </div>
         <div className="user-info">

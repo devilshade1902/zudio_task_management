@@ -17,6 +17,9 @@ const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [visibleNotifications, setVisibleNotifications] = useState([]);
   const [name, setName] = useState('');
+  const [dismissedIds, setDismissedIds] = useState(() => {
+    return JSON.parse(localStorage.getItem('dismissedNotificationIds') || '[]');
+  });
 
   useEffect(() => {
     console.log('Mounting Notifications component');
@@ -34,10 +37,14 @@ const Notifications = () => {
       } catch (err) {
         console.error('Error decoding token:', err.message);
         setName('Guest');
+        setNotifications([]);
+        setVisibleNotifications([]);
       }
     } else {
       console.log('No token, setting name to Guest');
       setName('Guest');
+      setNotifications([]);
+      setVisibleNotifications([]);
     }
 
     const onConnect = () => {
@@ -46,14 +53,27 @@ const Notifications = () => {
 
     const onNewNotification = (notification) => {
       console.log('Received new notification:', notification);
+      if (dismissedIds.includes(notification._id)) {
+        console.log(`Notification ${notification._id} already dismissed, skipping`);
+        return;
+      }
       setNotifications((prev) => [notification, ...prev]);
       setVisibleNotifications((prev) => {
-        const updated = [notification, ...prev].slice(0, 5);
+        const updated = [notification, ...prev.filter(n => !dismissedIds.includes(n._id))].slice(0, 5);
         console.log('Updated visible notifications:', updated);
         return updated;
       });
       setTimeout(() => {
-        setVisibleNotifications((prev) => prev.filter((n) => n._id !== notification._id));
+        setVisibleNotifications((prev) => {
+          const filtered = prev.filter((n) => n._id !== notification._id);
+          console.log(`Auto-dismissing notification ${notification._id}`);
+          return filtered;
+        });
+        setDismissedIds((prev) => {
+          const updated = [...prev, notification._id];
+          localStorage.setItem('dismissedNotificationIds', JSON.stringify(updated));
+          return updated;
+        });
       }, 5000);
     };
 
@@ -79,7 +99,11 @@ const Notifications = () => {
       socket.off('newNotification', onNewNotification);
       socket.off('connect_error', onConnectError);
     };
-  }, [name]);
+  }, [name, dismissedIds]);
+
+  useEffect(() => {
+    localStorage.setItem('dismissedNotificationIds', JSON.stringify(dismissedIds));
+  }, [dismissedIds]);
 
   const fetchNotifications = async (userName) => {
     try {
@@ -97,11 +121,28 @@ const Notifications = () => {
       const filteredNotifications = res.data.filter((notification) => {
         const createdAt = new Date(notification.createdAt);
         const hoursDiff = (now - createdAt) / (1000 * 60 * 60);
-        return hoursDiff <= 24;
+        return hoursDiff <= 24 && !dismissedIds.includes(notification._id);
       });
       console.log('Filtered notifications:', filteredNotifications);
       setNotifications(filteredNotifications);
-      setVisibleNotifications(filteredNotifications.slice(0, 5));
+      setVisibleNotifications((prev) => {
+        const updated = filteredNotifications.slice(0, 5);
+        updated.forEach((notification) => {
+          setTimeout(() => {
+            setVisibleNotifications((current) => {
+              const filtered = current.filter((n) => n._id !== notification._id);
+              console.log(`Auto-dismissing notification ${notification._id}`);
+              return filtered;
+            });
+            setDismissedIds((current) => {
+              const updated = [...current, notification._id];
+              localStorage.setItem('dismissedNotificationIds', JSON.stringify(updated));
+              return updated;
+            });
+          }, 5000);
+        });
+        return updated;
+      });
     } catch (err) {
       console.error('Error fetching notifications:', err.response?.data?.message || err.message);
       setTimeout(() => {
@@ -122,6 +163,11 @@ const Notifications = () => {
       console.log(`Marked notification ${id} as read`);
       setNotifications((prev) => prev.filter((n) => n._id !== id));
       setVisibleNotifications((prev) => prev.filter((n) => n._id !== id));
+      setDismissedIds((prev) => {
+        const updated = [...prev, id];
+        localStorage.setItem('dismissedNotificationIds', JSON.stringify(updated));
+        return updated;
+      });
     } catch (err) {
       console.error('Error marking notification as read:', err.response?.data?.message || err.message);
     }
@@ -129,6 +175,11 @@ const Notifications = () => {
 
   const removeNotification = (id) => {
     setVisibleNotifications((prev) => prev.filter((n) => n._id !== id));
+    setDismissedIds((prev) => {
+      const updated = [...prev, id];
+      localStorage.setItem('dismissedNotificationIds', JSON.stringify(updated));
+      return updated;
+    });
     console.log(`Removed notification ${id} from visible`);
   };
 

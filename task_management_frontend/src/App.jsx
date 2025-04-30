@@ -3,14 +3,13 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import "./App.css";
 import Layout from "./components/Layout/Layout"; // Fixed import casing
 import Dashboard from "./pages/Dashboard/Dashboard";
-import Login from "./pages/Login/Login";
-import SignUp from "./pages/Signup/Signup";
 import ViewTasks from "./pages/ViewTasks/Viewtasks";
 import Users from "./pages/Users/Users";
 import MyTasks from "./pages/MyTasks/MyTasks";
 import MeetingCard from "./pages/Meetings/MeetingCard";
 import MeetingLobby from "./pages/Meetings/MeetingLobby";
 import LoginSignup from "./pages/LoginSignup/LoginSignup";
+import CalendarView from './pages/calendar/Calendar';
 
 function App() {
   
@@ -28,6 +27,7 @@ function App() {
           <Route path="users" element={<Users />} /> 
           <Route path="mytasks" element={<MyTasks />} /> 
           <Route path="meetings" element={<MeetingCard />} />
+          <Route path="calendar" element={<CalendarView />} />
         </Route>
       </Routes>
     </BrowserRouter>
