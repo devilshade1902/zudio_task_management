@@ -10,6 +10,7 @@ import MeetingCard from "./pages/Meetings/MeetingCard";
 import MeetingLobby from "./pages/Meetings/MeetingLobby";
 import LoginSignup from "./pages/LoginSignup/LoginSignup";
 import CalendarView from './pages/calendar/Calendar';
+import ChatRoom from "./pages/Chat/ChatRoom";
 
 function App() {
   
@@ -28,6 +29,7 @@ function App() {
           <Route path="mytasks" element={<MyTasks />} /> 
           <Route path="meetings" element={<MeetingCard />} />
           <Route path="calendar" element={<CalendarView />} />
+          <Route path="chat" element={<ChatRoom />} />
         </Route>
       </Routes>
     </BrowserRouter>

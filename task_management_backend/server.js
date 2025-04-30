@@ -213,7 +213,28 @@ io.on('connection', (socket) => {
   socket.on('error', (err) => {
     console.error('Socket.IO server error:', err);
   });
+  console.log(` New user connected: ${socket.id}`);
+
+  socket.on('joinRoom', ({ room, username }) => {
+    socket.join(room);
+    socket.username = username;
+    console.log(` ${username} joined room: ${room}`);
+    socket.to(room).emit('message', {
+      username: 'System',
+      message: ` ${username} joined the chat`,
+    });
+  });
+
+  socket.on('sendMessage', ({ room, message, username }) => {
+    console.log(` ${username} in ${room}: ${message}`);
+    io.to(room).emit('message', { username, message });
+  });
+
+  socket.on('disconnect', () => {
+    console.log(` User disconnected: ${socket.id}`);
+  });
 });
+
 
 // Make io accessible to routes
 app.set('io', io);
