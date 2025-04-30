@@ -4,12 +4,17 @@ const Notification = require('../models/Notification');
 
 const router = express.Router();
 
-// Get unread notifications for the authenticated user
+// Get all notifications for the authenticated user (last 24 hours)
 router.get('/', auth, async (req, res) => {
   try {
-    const notifications = await Notification.find({ user: req.user.name, read: false })
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const notifications = await Notification.find({
+      user: req.user.name,
+      createdAt: { $gte: twentyFourHoursAgo },
+    })
       .populate('taskId', 'title')
       .sort({ createdAt: -1 });
+    console.log(`Fetched ${notifications.length} notifications for user: ${req.user.name}`);
     res.json(notifications);
   } catch (err) {
     console.error('Error fetching notifications:', err.message);
@@ -26,6 +31,7 @@ router.put('/:id/read', auth, async (req, res) => {
     }
     notification.read = true;
     await notification.save();
+    console.log(`Marked notification ${req.params.id} as read for user: ${req.user.name}`);
     res.json({ message: 'Notification marked as read' });
   } catch (err) {
     console.error('Error marking notification as read:', err.message);

@@ -13,6 +13,7 @@ const tasksRouter = require('./routes/tasks');
 const userRoutes = require('./routes/users');
 const notificationsRouter = require('./routes/notifications');
 const { scheduleTaskNotifications } = require('./utils/taskNotifications');
+const { scheduleNotificationCleanup } = require('./utils/cleanupNotifications');
 
 const app = express();
 const server = http.createServer(app);
@@ -222,8 +223,9 @@ app.use('/api/tasks', tasksRouter);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationsRouter);
 
-// Start Task Notification Cron Job
+// Start Task Notification and Cleanup Cron Jobs
 scheduleTaskNotifications(io);
+scheduleNotificationCleanup();
 
 // Start Server
 server.listen(PORT, () => {
