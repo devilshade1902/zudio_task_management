@@ -30,7 +30,9 @@ const MyTasks = () => {
 
     const fetchMyTasks = async () => {
       try {
-        const response = await axios.get(`http://localhost:5001/api/tasks/mytasks?name=${encodeURIComponent(name)}`);
+        const response = await axios.get(`http://localhost:5001/api/tasks/mytasks?name=${encodeURIComponent(name)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         setTasks(response.data.tasks);
         setLoading(false);
       } catch (err) {
@@ -47,7 +49,10 @@ const MyTasks = () => {
 
   const handleMarkAsCompleted = async (taskId) => {
     try {
-      const response = await axios.put(`http://localhost:5001/api/tasks/mytasks/${taskId}/complete`);
+      const token = localStorage.getItem("token");
+      const response = await axios.put(`http://localhost:5001/api/tasks/mytasks/${taskId}/complete`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (response.status === 200) {
         setTasks(tasks.map(task =>
           task._id === taskId ? { ...task, status: "Completed" } : task

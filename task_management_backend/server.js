@@ -1,5 +1,3 @@
-// server.js
-
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
@@ -7,12 +5,25 @@ const cors = require('cors');
 const axios = require('axios');
 const qs = require('qs');
 const crypto = require('crypto');
+const { Server } = require('socket.io');
+const http = require('http');
 
 const Meeting = require('./models/Meeting');
 const tasksRouter = require('./routes/tasks');
 const userRoutes = require('./routes/users');
+const notificationsRouter = require('./routes/notifications');
+const { scheduleTaskNotifications } = require('./utils/taskNotifications');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: 'http://localhost:5173',
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+});
+
 const PORT = process.env.PORT || 5001;
 
 // Middleware
@@ -181,11 +192,35 @@ app.delete('/api/meetings/:id', async (req, res) => {
   }
 });
 
+// Socket.IO Connection
+io.on('connection', (socket) => {
+  console.log('Socket.IO client connected:', socket.id);
+
+  // Join a room based on user name
+  socket.on('join', (userName) => {
+    if (userName) {
+      socket.join(userName);
+      console.log(`User ${userName} joined room`);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Socket.IO client disconnected:', socket.id);
+  });
+});
+
+// Make io accessible to routes
+app.set('io', io);
+
 // Additional Routes
 app.use('/api/tasks', tasksRouter);
 app.use('/api/users', userRoutes);
+app.use('/api/notifications', notificationsRouter);
+
+// Start Task Notification Cron Job
+scheduleTaskNotifications(io);
 
 // Start Server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Backend running on port ${PORT}`);
 });

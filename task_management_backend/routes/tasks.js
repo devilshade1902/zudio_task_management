@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Task = require('../models/Task');
 const User = require('../models/User');
-const Reminder = require('../models/Reminder');
+const Notification = require('../models/Notification');
 const { auth, restrictTo } = require('../middleware/auth');
 
 // Get all tasks with aggregated stats
@@ -38,6 +38,7 @@ router.get('/', async (req, res) => {
       tasks,
     });
   } catch (err) {
+    console.error('Error fetching tasks:', err.message);
     res.status(500).json({ message: err.message });
   }
 });
@@ -47,9 +48,11 @@ router.post('/', auth, restrictTo('Admin'), async (req, res) => {
   try {
     // Validate assignedUsers
     const { assignedUsers } = req.body;
+    let normalizedUsers = assignedUsers || [];
     if (assignedUsers && assignedUsers.length > 0) {
-      const users = await User.find({ name: { $in: assignedUsers } });
-      if (users.length !== assignedUsers.length) {
+      normalizedUsers = assignedUsers.map(user => user.trim().toLowerCase());
+      const users = await User.find({ name: { $in: normalizedUsers } });
+      if (users.length !== normalizedUsers.length) {
         return res.status(400).json({ message: 'One or more assigned users not found' });
       }
     }
@@ -60,7 +63,7 @@ router.post('/', auth, restrictTo('Admin'), async (req, res) => {
       status: req.body.status || 'Pending',
       priority: req.body.priority || 'Medium',
       dueDate: req.body.dueDate || null,
-      assignedUsers: req.body.assignedUsers || [],
+      assignedUsers: normalizedUsers,
       employeesAssigned: req.body.employeesAssigned || 0,
       document: req.body.document || null,
       category: req.body.category || '',
@@ -68,26 +71,50 @@ router.post('/', auth, restrictTo('Admin'), async (req, res) => {
 
     const newTask = await task.save();
 
-    // Create reminders if dueDate is set
+    // Create notifications for assigned users
+    if (normalizedUsers.length > 0) {
+      const notifications = normalizedUsers.map(user => ({
+        user,
+        message: `You have been assigned a new task: ${task.title}`,
+        type: 'NEW_TASK',
+        taskId: newTask._id,
+      }));
+      const savedNotifications = await Notification.insertMany(notifications);
+
+      // Emit WebSocket events
+      const io = req.app.get('io');
+      savedNotifications.forEach(notification => {
+        console.log(`Emitting newNotification to room: ${notification.user}`);
+        io.to(notification.user).emit('newNotification', notification);
+      });
+    }
+
+    // Create overdue notification if dueDate is within 24 hours
     if (task.dueDate) {
       const dueDate = new Date(task.dueDate);
-      const reminderDate = new Date(dueDate);
-      reminderDate.setDate(dueDate.getDate() - 1);
-
-      for (const user of task.assignedUsers) {
-        const reminder = new Reminder({
-          taskId: newTask._id,
+      const now = new Date();
+      const oneDayFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      if (dueDate <= oneDayFromNow && dueDate > now && normalizedUsers.length > 0) {
+        const notifications = normalizedUsers.map(user => ({
           user,
-          dueDate,
-          reminderDate,
-          message: `Task "${task.title}" is due tomorrow on ${dueDate.toLocaleDateString()}. Please complete it before the deadline.`,
+          message: `Task "${task.title}" is due soon on ${dueDate.toLocaleDateString()}`,
+          type: 'OVERDUE',
+          taskId: newTask._id,
+        }));
+        const savedNotifications = await Notification.insertMany(notifications);
+
+        // Emit WebSocket events
+        const io = req.app.get('io');
+        savedNotifications.forEach(notification => {
+          console.log(`Emitting newNotification to room: ${notification.user}`);
+          io.to(notification.user).emit('newNotification', notification);
         });
-        await reminder.save();
       }
     }
 
     res.status(201).json(newTask);
   } catch (err) {
+    console.error('Error creating task:', err.message);
     res.status(400).json({ message: err.message });
   }
 });
@@ -99,10 +126,11 @@ router.delete('/:id', auth, restrictTo('Admin'), async (req, res) => {
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
-    await Reminder.deleteMany({ taskId: task._id });
+    await Notification.deleteMany({ taskId: task._id });
     await task.deleteOne();
     res.json({ message: 'Task deleted' });
   } catch (err) {
+    console.error('Error deleting task:', err.message);
     res.status(500).json({ message: err.message });
   }
 });
@@ -116,7 +144,7 @@ router.put('/:id', auth, async (req, res) => {
     }
 
     const isAdmin = req.user.role === 'Admin';
-    const isAssigned = task.assignedUsers.includes(req.user.name);
+    const isAssigned = task.assignedUsers.includes(req.user.name.toLowerCase());
 
     if (!isAdmin && !isAssigned) {
       return res.status(403).json({ message: 'Not authorized to update this task' });
@@ -129,9 +157,11 @@ router.put('/:id', auth, async (req, res) => {
     if (req.body.priority && !['High', 'Medium', 'Low'].includes(req.body.priority)) {
       return res.status(400).json({ message: 'Invalid priority value' });
     }
+    let normalizedUsers = req.body.assignedUsers || task.assignedUsers;
     if (req.body.assignedUsers && req.body.assignedUsers.length > 0) {
-      const users = await User.find({ name: { $in: req.body.assignedUsers } });
-      if (users.length !== req.body.assignedUsers.length) {
+      normalizedUsers = req.body.assignedUsers.map(user => user.trim().toLowerCase());
+      const users = await User.find({ name: { $in: normalizedUsers } });
+      if (users.length !== normalizedUsers.length) {
         return res.status(400).json({ message: 'One or more assigned users not found' });
       }
     }
@@ -148,7 +178,7 @@ router.put('/:id', auth, async (req, res) => {
       task.status = req.body.status || task.status;
       task.priority = req.body.priority || task.priority;
       task.dueDate = req.body.dueDate ?? task.dueDate;
-      task.assignedUsers = req.body.assignedUsers || task.assignedUsers;
+      task.assignedUsers = normalizedUsers;
       task.employeesAssigned = req.body.employeesAssigned ?? task.employeesAssigned;
       task.document = req.body.document ?? task.document;
       task.category = req.body.category ?? task.category;
@@ -156,29 +186,53 @@ router.put('/:id', auth, async (req, res) => {
 
     const updatedTask = await task.save();
 
-    // Update reminders if dueDate or assignedUsers changed
+    // Create notifications for completion
+    if (req.body.status === 'Completed' && task.assignedUsers.length > 0) {
+      const notifications = task.assignedUsers.map(user => ({
+        user,
+        message: `Task "${task.title}" has been completed`,
+        type: 'COMPLETED',
+        taskId: task._id,
+      }));
+      const savedNotifications = await Notification.insertMany(notifications);
+
+      // Emit WebSocket events
+      const io = req.app.get('io');
+      savedNotifications.forEach(notification => {
+        console.log(`Emitting newNotification to room: ${notification.user}`);
+        io.to(notification.user).emit('newNotification', notification);
+      });
+    }
+
+    // Update overdue notifications if dueDate or assignedUsers changed
     if (isAdmin && (req.body.dueDate || req.body.assignedUsers)) {
-      await Reminder.deleteMany({ taskId: task._id });
+      await Notification.deleteMany({ taskId: task._id, type: 'OVERDUE' });
       if (task.dueDate) {
         const dueDate = new Date(task.dueDate);
-        const reminderDate = new Date(dueDate);
-        reminderDate.setDate(dueDate.getDate() - 1);
-
-        for (const user of task.assignedUsers) {
-          const reminder = new Reminder({
-            taskId: task._id,
+        const now = new Date();
+        const oneDayFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        if (dueDate <= oneDayFromNow && dueDate > now && task.assignedUsers.length > 0) {
+          const notifications = task.assignedUsers.map(user => ({
             user,
-            dueDate,
-            reminderDate,
-            message: `Task "${task.title}" is due tomorrow on ${dueDate.toLocaleDateString()}. Please complete it before the deadline.`,
+            message: `Task "${task.title}" is due soon on ${dueDate.toLocaleDateString()}`,
+            type: 'OVERDUE',
+            taskId: task._id,
+          }));
+          const savedNotifications = await Notification.insertMany(notifications);
+
+          // Emit WebSocket events
+          const io = req.app.get('io');
+          savedNotifications.forEach(notification => {
+            console.log(`Emitting newNotification to room: ${notification.user}`);
+            io.to(notification.user).emit('newNotification', notification);
           });
-          await reminder.save();
         }
       }
     }
 
     res.json(updatedTask);
   } catch (err) {
+    console.error('Error updating task:', err.message);
     res.status(400).json({ message: err.message });
   }
 });
@@ -190,9 +244,10 @@ router.get('/mytasks', async (req, res) => {
     if (!name) {
       return res.status(400).json({ message: 'Name query parameter is required' });
     }
-    const tasks = await Task.find({ assignedUsers: name });
+    const tasks = await Task.find({ assignedUsers: name.toLowerCase() });
     res.json({ tasks });
   } catch (err) {
+    console.error('Error fetching my tasks:', err.message);
     res.status(500).json({ message: err.message });
   }
 });
@@ -206,9 +261,31 @@ router.put('/mytasks/:id/complete', async (req, res) => {
     }
     task.status = 'Completed';
     const updatedTask = await task.save();
-    await Reminder.deleteMany({ taskId: task._id });
+
+    // Create completion notifications
+    if (task.assignedUsers.length > 0) {
+      const notifications = task.assignedUsers.map(user => ({
+        user,
+        message: `Task "${task.title}" has been completed`,
+        type: 'COMPLETED',
+        taskId: task._id,
+      }));
+      const savedNotifications = await Notification.insertMany(notifications);
+
+      // Emit WebSocket events
+      const io = req.app.get('io');
+      savedNotifications.forEach(notification => {
+        console.log(`Emitting newNotification to room: ${notification.user}`);
+        io.to(notification.user).emit('newNotification', notification);
+      });
+    }
+
+    // Delete overdue notifications
+    await Notification.deleteMany({ taskId: task._id, type: 'OVERDUE' });
+
     res.json(updatedTask);
   } catch (err) {
+    console.error('Error marking task as completed:', err.message);
     res.status(500).json({ message: err.message });
   }
 });

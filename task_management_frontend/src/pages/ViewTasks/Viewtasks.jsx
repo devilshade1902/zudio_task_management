@@ -47,7 +47,10 @@ const ViewTasks = () => {
 
   const fetchTasks = async () => {
     try {
-      const response = await axios.get('http://localhost:5001/api/tasks');
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5001/api/tasks', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const tasksByStatus = {
         "Pending": [],
         "In Progress": [],
@@ -83,8 +86,9 @@ const ViewTasks = () => {
   const handleDelete = async (taskId, status) => {
     if (window.confirm("Are you sure you want to delete this task?")) {
       try {
+        const token = localStorage.getItem('token');
         await axios.delete(`http://localhost:5001/api/tasks/${taskId}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
         setTasks(prev => ({
           ...prev,
@@ -148,6 +152,7 @@ const ViewTasks = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const token = localStorage.getItem('token');
       const taskData = {
         title: selectedTask.title,
         description: selectedTask.description,
@@ -161,11 +166,11 @@ const ViewTasks = () => {
       };
       if (isNewTask) {
         await axios.post('http://localhost:5001/api/tasks', taskData, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
       } else {
         await axios.put(`http://localhost:5001/api/tasks/${selectedTask._id}`, taskData, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
       }
       setIsModalOpen(false);
@@ -196,6 +201,7 @@ const ViewTasks = () => {
     }));
 
     try {
+      const token = localStorage.getItem('token');
       const taskData = {
         title: updatedTask.title,
         description: updatedTask.description,
@@ -208,7 +214,7 @@ const ViewTasks = () => {
         category: updatedTask.category,
       };
       await axios.put(`http://localhost:5001/api/tasks/${movedTask._id}`, taskData, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
     } catch (err) {
       console.error('Error updating task status:', err.response?.data?.message || err.message);
