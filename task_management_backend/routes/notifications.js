@@ -33,4 +33,26 @@ router.put('/:id/read', auth, async (req, res) => {
   }
 });
 
+// Create multiple notifications (for Kanban board status changes)
+router.post('/', auth, async (req, res) => {
+  const { notifications } = req.body;
+
+  if (!Array.isArray(notifications) || notifications.length === 0) {
+    return res.status(400).json({ message: 'Notifications array is required' });
+  }
+
+  try {
+    const savedNotifications = await Notification.insertMany(notifications);
+    const io = req.app.get('io');
+    savedNotifications.forEach(notification => {
+      console.log(`Emitting newNotification to room: ${notification.user}`, notification);
+      io.to(notification.user).emit('newNotification', notification);
+    });
+    res.status(201).json(savedNotifications);
+  } catch (err) {
+    console.error('Error creating notifications:', err.message);
+    res.status(500).json({ message: 'Failed to create notifications' });
+  }
+});
+
 module.exports = router;

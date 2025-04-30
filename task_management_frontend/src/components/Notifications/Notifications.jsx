@@ -1,34 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaExclamationCircle, FaBell, FaCheckCircle, FaTimes } from 'react-icons/fa';
+import { FaExclamationCircle, FaBell, FaCheckCircle, FaTimes ,FaInfoCircle} from 'react-icons/fa';
 import io from 'socket.io-client';
 import './Notifications.css';
+
+// Initialize Socket.IO client
+const socket = io('http://localhost:5001', {
+  withCredentials: true,
+  transports: ['websocket', 'polling'],
+  reconnection: true,
+  reconnectionAttempts: 10,
+  reconnectionDelay: 1000,
+  timeout: 20000,
+});
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [visibleNotifications, setVisibleNotifications] = useState([]);
 
   useEffect(() => {
-    // Initialize Socket.IO
-    const socket = io('http://localhost:5001', {
-      withCredentials: true,
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-    });
+    console.log('Mounting Notifications component');
+
+    // Log socket connection attempt
+    console.log('Attempting Socket.IO connection');
 
     // Fetch initial notifications
     fetchNotifications();
 
-    // Join WebSocket room with user name
+    // Join WebSocket room
     const token = localStorage.getItem('token');
     if (token) {
       try {
         const decoded = JSON.parse(atob(token.split('.')[1]));
         console.log('JWT Decoded:', decoded);
-        socket.emit('join', decoded.name.trim().toLowerCase());
-        console.log(`Joining room: ${decoded.name.trim().toLowerCase()}`);
+        const room = decoded.name.trim().toLowerCase();
+        socket.emit('join', room);
+        console.log(`Joining room: ${room}`);
       } catch (err) {
         console.error('Error decoding token:', err.message);
       }
@@ -37,11 +44,11 @@ const Notifications = () => {
     }
 
     // Socket.IO event listeners
-    socket.on('connect', () => {
+    const onConnect = () => {
       console.log('Connected to Socket.IO server');
-    });
+    };
 
-    socket.on('newNotification', (notification) => {
+    const onNewNotification = (notification) => {
       console.log('Received new notification:', notification);
       setNotifications(prev => [notification, ...prev]);
       setVisibleNotifications(prev => {
@@ -53,33 +60,50 @@ const Notifications = () => {
       setTimeout(() => {
         setVisibleNotifications(prev => prev.filter(n => n._id !== notification._id));
       }, 5000);
-    });
+    };
 
-    socket.on('connect_error', (err) => {
-      console.error('Socket.IO connection error:', err.message);
-    });
+    const onConnectError = (err) => {
+      console.error('Socket.IO connect_error:', {
+        message: err.message,
+        description: err.description,
+        context: err.context,
+        transport: socket.io.engine.transport.name,
+      });
+    };
 
-    socket.on('reconnect', (attempt) => {
+    const onReconnect = (attempt) => {
       console.log(`Reconnected to Socket.IO server after ${attempt} attempts`);
-    });
+    };
 
-    socket.on('reconnect_error', (err) => {
-      console.error('Socket.IO reconnect error:', err.message);
-    });
+    const onReconnectError = (err) => {
+      console.error('Socket.IO reconnect_error:', {
+        message: err.message,
+        description: err.description,
+        context: err.context,
+      });
+    };
 
-    socket.on('error', (err) => {
+    const onError = (err) => {
       console.error('Socket.IO error:', err);
-    });
+    };
+
+    socket.on('connect', onConnect);
+    socket.on('newNotification', onNewNotification);
+    socket.on('connect_error', onConnectError);
+    socket.on('reconnect', onReconnect);
+    socket.on('reconnect_error', onReconnectError);
+    socket.on('error', onError);
 
     // Cleanup
     return () => {
-      socket.off('connect');
-      socket.off('newNotification');
-      socket.off('connect_error');
-      socket.off('reconnect');
-      socket.off('reconnect_error');
-      socket.off('error');
-      socket.disconnect();
+      console.log('Unmounting Notifications component');
+      socket.off('connect', onConnect);
+      socket.off('newNotification', onNewNotification);
+      socket.off('connect_error', onConnectError);
+      socket.off('reconnect', onReconnect);
+      socket.off('reconnect_error', onReconnectError);
+      socket.off('error', onError);
+      // Keep socket connected
     };
   }, []);
 
@@ -95,7 +119,7 @@ const Notifications = () => {
       });
       console.log('Fetched notifications:', res.data);
       setNotifications(res.data);
-      setVisibleNotifications(res.data.slice(0, 5)); // Display latest 5 notifications
+      setVisibleNotifications(res.data.slice(0, 5));
     } catch (err) {
       console.error('Error fetching notifications:', err.response?.data?.message || err.message);
     }
@@ -131,6 +155,7 @@ const Notifications = () => {
             {notification.type === 'OVERDUE' && <FaExclamationCircle />}
             {notification.type === 'NEW_TASK' && <FaBell />}
             {notification.type === 'COMPLETED' && <FaCheckCircle />}
+            {notification.type === 'STATUS_CHANGED' && <FaInfoCircle />}
           </div>
           <div className="notification-content">
             <p>{notification.message}</p>

@@ -196,16 +196,21 @@ app.delete('/api/meetings/:id', async (req, res) => {
 io.on('connection', (socket) => {
   console.log('Socket.IO client connected:', socket.id);
 
-  // Join a room based on user name
   socket.on('join', (userName) => {
     if (userName) {
       socket.join(userName);
       console.log(`User ${userName} joined room`);
+    } else {
+      console.log('No username provided for join event');
     }
   });
 
   socket.on('disconnect', () => {
     console.log('Socket.IO client disconnected:', socket.id);
+  });
+
+  socket.on('error', (err) => {
+    console.error('Socket.IO server error:', err);
   });
 });
 

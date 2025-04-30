@@ -20,29 +20,32 @@ function scheduleTaskNotifications(io) {
       for (const task of tasks) {
         if (task.assignedUsers && task.assignedUsers.length > 0) {
           task.assignedUsers.forEach(user => {
-            notifications.push({
+            const notification = {
               user: user.trim().toLowerCase(),
               message: `Task "${task.title}" is due soon on ${new Date(task.dueDate).toLocaleDateString()}`,
               type: 'OVERDUE',
               taskId: task._id,
-            });
+            };
+            notifications.push(notification);
+            console.log(`Prepared notification for ${user}:`, notification);
           });
+        } else {
+          console.log(`Task "${task.title}" has no assigned users, skipping notification`);
         }
       }
 
       if (notifications.length > 0) {
         const savedNotifications = await Notification.insertMany(notifications);
-        // Emit WebSocket events
         savedNotifications.forEach(notification => {
-          console.log(`Emitting newNotification to room: ${notification.user}`);
+          console.log(`Emitting OVERDUE notification to room: ${notification.user}`, notification);
           io.to(notification.user).emit('newNotification', notification);
         });
-        console.log(`Created ${notifications.length} overdue notifications`);
+        console.log(`Created and emitted ${notifications.length} overdue notifications`);
       } else {
-        console.log('No near-overdue tasks found');
+        console.log('No overdue notifications to create');
       }
     } catch (err) {
-      console.error('Error in task notification cron:', err.message);
+      console.error('Error in overdue task notification cron:', err.message, err.stack);
     }
   });
 }
