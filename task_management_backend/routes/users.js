@@ -2,8 +2,19 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
+const sendgridTransport = require('nodemailer-sendgrid-transport');
 const User = require('../models/User');
 const { auth, restrictTo } = require('../middleware/auth');
+
+// Email transporter setup (SendGrid)
+const transporter = nodemailer.createTransport(
+  sendgridTransport({
+    auth: {
+      api_key: process.env.SENDGRID_API_KEY,
+    },
+  })
+);
 
 // Signup route
 router.post('/signup', async (req, res) => {
@@ -60,10 +71,73 @@ router.post('/login', async (req, res) => {
     );
     res.json({
       token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role }
+      user: { id: user._id, name: user.name, email: user.email, role: user.role },
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+});
+
+// Forgot password route
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.json({ exists: false, message: 'Email does not exist' });
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+    user.otp = otp;
+    user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    await user.save();
+
+    const mailOptions = {
+      to: user.email,
+      from: 'dhruvsawant1811@gmail.com', // Must match verified SendGrid sender
+      subject: 'Password Reset OTP',
+      html: `
+        <h2>Password Reset OTP</h2>
+        <p>Your One-Time Password (OTP) for password reset is:</p>
+        <h3>${otp}</h3>
+        <p>This OTP is valid for 10 minutes. Enter it on the verification page to reset your password.</p>
+        <p>If you did not request this, please ignore this email.</p>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    res.json({ exists: true, message: 'OTP sent to your email' });
+  } catch (err) {
+    console.error('Error in forgot-password:', err);
+    res.status(500).json({ message: 'Failed to send OTP' });
+  }
+});
+
+// Verify OTP and reset password route
+router.post('/verify-otp', async (req, res) => {
+  const { email, otp, password } = req.body;
+
+  try {
+    const user = await User.findOne({
+      email,
+      otp,
+      otpExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired OTP' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(password, salt);
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    await user.save();
+
+    res.json({ message: 'Password reset successfully' });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to reset password' });
   }
 });
 
@@ -98,7 +172,10 @@ router.put('/:id/role', auth, restrictTo('Admin'), async (req, res) => {
     user.role = role;
     await user.save();
 
-    res.json({ message: 'Role updated', user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+    res.json({
+      message: 'Role updated',
+      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
