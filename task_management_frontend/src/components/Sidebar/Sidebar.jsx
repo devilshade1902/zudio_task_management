@@ -74,7 +74,7 @@ const Sidebar = ({ isOpen, toggle }) => {
             <li className="text-wrap">Calendar</li>
           </NavLink>
           <NavLink
-            to="/dashboard/chat"
+            to="/dashboard/tasklist"
             className={({ isActive }) => (isActive ? "active" : "")}
             style={{ textDecoration: 'none', color: 'white' }}
           >
