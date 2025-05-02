@@ -1,98 +1,88 @@
-import React, { useEffect, useState } from 'react';
-import io from 'socket.io-client';
-import '../Chat/ChatRoom.css'
+import React, { useState, useEffect } from "react";
+import "./ChatRoom.css"; // Import external CSS
+import Topbar from "../../components/Topbar/Topbar";
+import Sidebar from "../../components/Sidebar/Sidebar";
 
-const socket = io('http://localhost:5001');
-
-function ChatRoom() {
-  const [room, setRoom] = useState('');
-  const [joinedRoom, setJoinedRoom] = useState('');
-  const [username, setUsername] = useState('');
-  const [message, setMessage] = useState('');
-  const [chat, setChat] = useState([]);
-
-  const joinRoom = () => {
-    if (room && username) {
-      socket.emit('joinRoom', { room, username });
-      setJoinedRoom(room);
-      setChat([]);
-    }
-  };
-
-  const sendMessage = () => {
-    if (message.trim() !== '' && joinedRoom !== '') {
-      socket.emit('sendMessage', { room: joinedRoom, message, username });
-      setMessage('');
-    }
-  };
+function ChatRoom({ roomId, username }) {
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState("");
 
   useEffect(() => {
-    socket.on('message', (data) => {
-      setChat((prev) => [...prev, data]);
-    });
+    // Fetch messages for the room
+    async function fetchMessages() {
+      try {
+        const response = await fetch(`/api/chat/${roomId}/messages`);
+        if (!response.ok) {
+          console.error(`Error fetching messages: ${response.status} ${response.statusText}`);
+          return;
+        }
+        const data = await response.json();
+        setMessages(data);
+      } catch (error) {
+        console.error("Error fetching messages:", error);
+      }
+    }
 
-    return () => socket.off('message');
-  }, []);
+    fetchMessages();
+  }, [roomId]);
+
+  const sendMessage = async () => {
+    if (newMessage.trim() === "") return;
+
+    try {
+      const response = await fetch(`/api/chat/${roomId}/messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, message: newMessage }),
+      });
+
+      if (!response.ok) {
+        console.error(`Error sending message: ${response.status} ${response.statusText}`);
+        return;
+      }
+
+      const savedMessage = await response.json();
+      setMessages((prevMessages) => [...prevMessages, savedMessage]);
+      setNewMessage("");
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
+  };
 
   return (
-    <div className="app-container">
-      <div className="chat-box">
-        <h2 className="chat-title">💬 Real-Time Chat</h2>
-
-        {/* Room Join Section */}
-        {!joinedRoom && (
-          <div className="join-section">
-            <input
-              className="input"
-              type="text"
-              placeholder="Your name"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-            <input
-              className="input"
-              type="text"
-              placeholder="Enter room name"
-              value={room}
-              onChange={(e) => setRoom(e.target.value)}
-            />
-            <button onClick={joinRoom} className="join-button">
-              Join Room
-            </button>
-          </div>
-        )}
-
-        {/* Chat Section */}
-        {joinedRoom && (
-          <>
-            <div className="joined-room">
-              Joined Room: <span className="joined-room-name">{joinedRoom}</span>
-            </div>
-
-            <div className="chat-messages">
-              {chat.map((msg, idx) => (
-                <div key={idx} className="chat-message">
-                  <span className="chat-username">{msg.username}</span>: {msg.message}
-                </div>
-              ))}
-            </div>
-
-            <div className="message-input-section">
-              <input
-                className="input message-input"
-                type="text"
-                placeholder="Type your message"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-              />
-              <button onClick={sendMessage} className="send-button">
-                Send
-              </button>
-            </div>
-          </>
-        )}
+    <div>
+      <Topbar />
+      <Sidebar />
+    <div className="chat-room-page">
+      <div className="chat-room-container">
+        <header className="chat-room-header">
+          <h1>Chat Room: {roomId}</h1>
+        </header>
+        <div className="chat-messages-container">
+          {messages.length === 0 ? (
+            <p className="no-messages">No messages yet. Start the conversation!</p>
+          ) : (
+            messages.map((msg, index) => (
+              <div key={index} className={`chat-message ${msg.username === username ? "self" : ""}`}>
+                <strong>{msg.username}:</strong> <span>{msg.message}</span>
+              </div>
+            ))
+          )}
+        </div>
+        <div className="chat-input-container">
+          <input
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Type a message"
+            className="chat-input"
+          />
+          <button onClick={sendMessage} className="send-button">Send</button>
+        </div>
       </div>
+    </div>
     </div>
   );
 }

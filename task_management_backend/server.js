@@ -10,6 +10,7 @@ const http = require('http');
 
 const Meeting = require('./models/Meeting');
 const tasksRouter = require('./routes/tasks');
+const chatRouter = require('./routes/chat');
 const userRoutes = require('./routes/users');
 const notificationsRouter = require('./routes/notifications');
 const { scheduleTaskNotifications } = require('./utils/taskNotifications');
@@ -26,7 +27,7 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 5001;
-
+const chatRooms = {};
 // Middleware
 app.use(cors({
   origin: 'http://localhost:5173',
@@ -194,45 +195,72 @@ app.delete('/api/meetings/:id', async (req, res) => {
 });
 
 // Socket.IO Connection
+
 io.on('connection', (socket) => {
   console.log('Socket.IO client connected:', socket.id);
 
-  socket.on('join', (userName) => {
-    if (userName) {
-      socket.join(userName);
-      console.log(`User ${userName} joined room`);
-    } else {
-      console.log('No username provided for join event');
+  socket.on('joinRoom', async ({ room, username }) => {
+    const taskId = room.split('-')[1]; // assuming room = task-<taskId>
+
+    try {
+      const task = await Task.findById(taskId);
+
+      if (!task) {
+        socket.emit('roomDenied', { message: 'Task not found.' });
+        return;
+      }
+
+      if (!task.assignedUsers.includes(username)) {
+        socket.emit('roomDenied', { message: 'Access denied to this chat room.' });
+        return;
+      }
+
+      // Add user to room
+      if (!chatRooms[room]) chatRooms[room] = [];
+      chatRooms[room].push({ id: socket.id, username });
+      socket.join(room);
+
+      console.log(`${username} joined room: ${room}`);
+      io.to(room).emit('message', { username: 'System', message: `${username} joined the chat.` });
+
+    } catch (err) {
+      console.error('Join room error:', err);
+      socket.emit('roomDenied', { message: 'Server error while joining room.' });
     }
   });
 
-  socket.on('disconnect', () => {
-    console.log('Socket.IO client disconnected:', socket.id);
-  });
-
-  socket.on('error', (err) => {
-    console.error('Socket.IO server error:', err);
-  });
-  console.log(` New user connected: ${socket.id}`);
-
-  socket.on('joinRoom', ({ room, username }) => {
-    socket.join(room);
-    socket.username = username;
-    console.log(` ${username} joined room: ${room}`);
-    socket.to(room).emit('message', {
-      username: 'System',
-      message: ` ${username} joined the chat`,
-    });
-  });
-
   socket.on('sendMessage', ({ room, message, username }) => {
-    console.log(` ${username} in ${room}: ${message}`);
     io.to(room).emit('message', { username, message });
   });
 
   socket.on('disconnect', () => {
-    console.log(` User disconnected: ${socket.id}`);
+    console.log(`Client disconnected: ${socket.id}`);
+
+    for (const room in chatRooms) {
+      chatRooms[room] = chatRooms[room].filter(user => user.id !== socket.id);
+
+      if (chatRooms[room].length === 0) {
+        delete chatRooms[room];
+        console.log(`Room ${room} deleted as it's now empty`);
+      }
+    }
   });
+
+  socket.on('error', (err) => {
+    console.error('Socket.IO error:', err);
+  });
+});
+
+// Room Deletion on Task Completion 
+app.delete('/delete-room/:room', (req, res) => {
+  const room = req.params.room;
+  if (chatRooms[room]) {
+    io.to(room).emit('message', { username: 'System', message: 'This chat room has been deleted.' });
+    delete chatRooms[room];
+    res.status(200).send('Room deleted successfully');
+  } else {
+    res.status(404).send('Room not found');
+  }
 });
 
 
@@ -243,7 +271,7 @@ app.set('io', io);
 app.use('/api/tasks', tasksRouter);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationsRouter);
-
+app.use('/api/chat', chatRouter);
 // Start Task Notification and Cleanup Cron Jobs
 scheduleTaskNotifications(io);
 scheduleNotificationCleanup();
