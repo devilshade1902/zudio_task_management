@@ -6,13 +6,14 @@ import ViewTasks from './pages/ViewTasks/Viewtasks';
 import Users from './pages/Users/Users';
 import MyTasks from './pages/MyTasks/MyTasks';
 import MeetingCard from './pages/Meetings/MeetingCard';
-import MeetingLobby from './pages/Meetings/MeetingLobby';
 import LoginSignup from './pages/LoginSignup/LoginSignup';
 import ForgotPassword from './components/Forgotpassword/ForgotPassword';
 import VerifyOtp from './components/VerifyOtp/VerifyOtp';
 import CalendarView from './pages/calendar/Calendar';
 import ChatRoom from './pages/Chat/ChatRoom';
 import TaskList from './pages/Chat/TaskList';
+import MeetingRoom from "./pages/Meetings/MeetingRoom";
+
 function App() {
   function ChatRoomWrapper() {
     const { roomId } = useParams();
@@ -29,7 +30,7 @@ function App() {
         <Route path="/" element={<LoginSignup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/verify-otp" element={<VerifyOtp />} />
-        <Route path="/meeting-lobby" element={<MeetingLobby />} />
+        <Route path="/meeting/:roomName" element={<MeetingRoom />} />
         <Route path="chat/:roomId" element={<ChatRoomWrapper />} />
         <Route path="/dashboard" element={<Layout />}>
           <Route index element={<Dashboard />} />
