@@ -200,4 +200,50 @@ router.delete('/:id', auth, restrictTo('Admin'), async (req, res) => {
   }
 });
 
+// Get user by ID
+router.get('/:id', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Get user email by ID
+router.get('/by-id/:id', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('email');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get user by email or username
+router.get('/by-email/:identifier', auth, async (req, res) => {
+  try {
+    const { identifier } = req.params;
+
+    // Try to find by email first
+    const user = await User.findOne({
+      $or: [
+        { email: identifier.toLowerCase() },
+        { name: identifier } // optional if you use 'user19' as name
+      ]
+    }).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 module.exports = router;

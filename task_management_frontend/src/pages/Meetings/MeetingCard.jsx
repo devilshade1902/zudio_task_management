@@ -1,50 +1,150 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from 'react-router-dom';
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
-import ZoomMtgEmbedded from "@zoom/meetingsdk/embedded";
 import "./MeetingCard.css";
+import Select from 'react-select';
 
 const MeetingCard = () => {
-  const [meetings, setMeetings] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedMeeting, setSelectedMeeting] = useState(null);
   const [isNewMeeting, setIsNewMeeting] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [loggedInUser, setLoggedInUser] = useState("");
+  const [meetings, setMeetings] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [selectedTask, setSelectedTask] = useState("");
+  const [taskUsers, setTaskUsers] = useState([]);
+  const [selectedParticipants, setSelectedParticipants] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
       try {
         const decoded = jwtDecode(token);
-        setIsAdmin(decoded.role === "Admin");
+        const isAdminUser = decoded.role === "Admin";
+        setIsAdmin(isAdminUser);
+        fetchUserEmail(decoded.id, isAdminUser);
+        fetchTasks(); // Can stay here
       } catch (err) {
         console.error("Token decoding failed", err);
       }
     }
-
-    fetchMeetings();
   }, []);
-
-  const fetchMeetings = async () => {
+  
+  const fetchUserEmail = async (id, isAdminUser) => {
     try {
-      const res = await axios.get("http://localhost:5001/api/meetings");
-      setMeetings(res.data);
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`http://localhost:5001/api/users/by-id/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const email = res.data.email;
+      setLoggedInUser(email);
+      fetchMeetings(email, isAdminUser);
+    } catch (err) {
+      console.error("Failed to fetch user email", err);
+    }
+  };
+  
+  const fetchMeetings = async (email, isAdminUser) => {
+    try {
+      const token = localStorage.getItem("token"); // Make sure token is retrieved inside the function
+      if (!token) {
+        throw new Error("No token found in localStorage");
+      }
+  
+      const res = await axios.get("http://localhost:5001/meetings/get-meetings");
+      const data = res.data;
+  
+      const filtered = isAdminUser
+        ? data
+        : data.filter((meeting) => {
+            const participants = Array.isArray(meeting.participants) ? meeting.participants : [];
+            return meeting.createdBy === email || participants.includes(email);
+          });
+  
+      // Enrich meetings with usernames from participants
+      const enrichedMeetings = await Promise.all(filtered.map(async (meeting) => {
+        let usernames = [];
+      
+        try {
+          usernames = await Promise.all(
+            meeting.participants.map(async (email) => {
+              const res = await axios.get(`http://localhost:5001/api/users/by-email/${email}`, {
+                headers: { Authorization: `Bearer ${token}` } // Make sure token is in headers
+              });
+              return res.data.name;
+            })
+          );
+        } catch (e) {
+          console.warn("Username fetch failed", e);
+        }
+      
+        console.log("Enriched meeting with usernames:", usernames);
+      
+        return {
+          ...meeting,
+          usernames
+        };
+      }));
+  
+      setMeetings(enrichedMeetings);
     } catch (err) {
       console.error("Failed to load meetings", err);
     }
+  };  
+  
+  const fetchTasks = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get("http://localhost:5001/api/tasks", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTasks(res.data.tasks);
+    } catch (err) {
+      console.error("Failed to fetch tasks", err);
+    }
   };
 
-  const handleEnterLobby = (meeting, isAdmin) => {
-    const meetingNumber = extractMeetingNumber(meeting.link);
-    const passcode = extractPasscode(meeting.link);
-    const role = isAdmin ? 1 : 0;
-  
-    const lobbyUrl = `/meeting-lobby?meetingNumber=${meetingNumber}&passcode=${passcode}&role=${role}`;
-    
-    window.open(lobbyUrl, "_blank");
+  const fetchUsersByTask = async (taskId) => {
+    const task = tasks.find((t) => t._id === taskId);
+    if (!task) return;
+
+    setLoadingUsers(true);
+    try {
+      const token = localStorage.getItem('token');
+      const users = await Promise.all(
+        task.assignedUsers.map(async (identifier) => {
+          try {
+            const res = await axios.get(`http://localhost:5001/api/users/by-email/${identifier}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            return res.data;
+          } catch (err) {
+            console.error(`Failed to fetch user ${identifier}`, err);
+            return null;
+          }
+        })
+      );
+      setTaskUsers(users.filter(Boolean));
+    } catch (err) {
+      console.error("Error fetching users for task", err);
+    } finally {
+      setLoadingUsers(false);
+    }
   };
-  
+
+  const handleTaskChange = (selectedOption) => {
+    const taskId = selectedOption ? selectedOption.value : "";
+    setSelectedTask(taskId);
+    setSelectedParticipants([]);
+    fetchUsersByTask(taskId);
+  };
+
   const handleAddNewMeeting = () => {
     setSelectedMeeting({
       title: "",
@@ -52,22 +152,38 @@ const MeetingCard = () => {
       date: "",
       time: "",
       duration: "",
-      link: "",
+      passcode: "",
     });
     setIsNewMeeting(true);
     setIsModalOpen(true);
+    setTaskUsers([]);
+    setSelectedTask("");
+    setSelectedParticipants([]);
   };
 
   const handleEdit = (meeting) => {
     setSelectedMeeting(meeting);
+    setSelectedParticipants(meeting.participants);
+    setSelectedTask(meeting.taskId || "");
     setIsNewMeeting(false);
     setIsModalOpen(true);
+
+    if (tasks.length > 0) {
+      fetchUsersByTask(meeting.taskId);
+    } else {
+      const interval = setInterval(() => {
+        if (tasks.length > 0) {
+          fetchUsersByTask(meeting.taskId);
+          clearInterval(interval);
+        }
+      }, 200);
+    }
   };
 
   const handleDelete = async (id) => {
     if (window.confirm("Delete this meeting?")) {
       await axios.delete(`http://localhost:5001/api/meetings/${id}`);
-      fetchMeetings();
+      fetchMeetings(loggedInUser, isAdmin);
     }
   };
 
@@ -79,220 +195,179 @@ const MeetingCard = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      let meetingData = { ...selectedMeeting };
+      const roomName = `${selectedMeeting.title}-${Date.now()}`;
+      const participantEmails = taskUsers
+        .filter(user => selectedParticipants.includes(user._id))
+        .map(user => user.email);
+      const selectedTaskData = tasks.find(task => task._id === selectedTask);
+      const taskTitle = selectedTaskData ? selectedTaskData.title : "";
+
+      const payloadData = {
+        ...selectedMeeting,
+        roomName,
+        createdBy: loggedInUser,
+        participants: participantEmails,
+        taskName: taskTitle,
+      };
+
       if (isNewMeeting) {
-        const zoomResponse = await axios.post(
-          "http://localhost:5001/api/zoom/create-meeting",
-          {
-            topic: selectedMeeting.title,
-            description: selectedMeeting.description,
-            startTime: `${selectedMeeting.date}T${selectedMeeting.time}`,
-            duration: selectedMeeting.duration || 30,
-          }
-        );
-
-        meetingData.link = zoomResponse.data.join_url;
-        meetingData.start_url = zoomResponse.data.start_url;
-
-        await axios.post("http://localhost:5001/api/meetings", meetingData);
+        await axios.post("http://localhost:5001/meetings/create-meeting", payloadData);
       } else {
-        await axios.put(
-          `http://localhost:5001/api/meetings/${selectedMeeting._id}`,
-          meetingData
-        );
+        await axios.put(`http://localhost:5001/meetings/${selectedMeeting._id}`, payloadData);
       }
 
       setIsModalOpen(false);
-      fetchMeetings();
+      fetchMeetings(loggedInUser, isAdmin);
     } catch (err) {
-      console.error("Failed to save meeting", err);
-    }
-  };
-
-  const extractMeetingNumber = (link) => {
-    const match = link.match(/\/j\/(\d+)|\/s\/(\d+)/);
-    return match ? match[1] || match[2] : "";
-  };
-
-  const extractPasscode = (link) => {
-    try {
-      const url = new URL(link);
-      return url.searchParams.get("pwd") || "";
-    } catch (err) {
-      console.error("Failed to extract passcode from link", err);
-      return "";
-    }
-  };
-
-  const handleJoinMeeting = async (meeting, isAdmin) => {
-    const client = ZoomMtgEmbedded.createClient();
-    const meetingSDKElement = document.getElementById("meetingSDKElement");
-  
-    try {
-      const meetingNumber = extractMeetingNumber(meeting.link);
-      const passcode = extractPasscode(meeting.link);
-  
-      // Choose the correct role (1 for host, 0 for attendee)
-      const role = isAdmin ? 1 : 0; // Admin is host (role 1), user is attendee (role 0)
-  
-      const res = await fetch("http://localhost:5001/api/zoom/generate-signature", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          meetingNumber,
-          role, // Pass the role correctly
-        }),
-      });
-  
-      const data = await res.json();
-  
-      client
-        .init({
-          zoomAppRoot: meetingSDKElement,
-          language: "en-US",
-          patchJsMedia: true,
-        })
-        .then(() => {
-          client
-            .join({
-              sdkKey: import.meta.env.VITE_ZOOM_SDK_KEY,
-              signature: data.signature,
-              meetingNumber,
-              password: passcode,
-              userName: meeting.userName || "Guest",
-            })
-            .then(() => {
-              console.log("Joined successfully");
-            })
-            .catch((error) => {
-              console.error("Failed to join the meeting", error);
-            });
-        })
-        .catch((error) => {
-          console.error("Failed to initialize the client", error);
-        });
-    } catch (err) {
-      console.error("Error joining Zoom SDK meeting", err);
+      console.error("Meeting submit error", err);
     }
   };
   
+  const generateTimeOptions = () => {
+    const times = [];
+    for (let hour = 0; hour < 24; hour++) {
+      const ampm = hour >= 12 ? "PM" : "AM";
+      const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+      const label = `${hour12}:00 ${ampm}`;
+      times.push({ value: label, label });
+    }
+    return times;
+  };
+  
+  const calculateEndTime = (startTime, duration) => {
+    const [time, meridian] = startTime.split(" ");
+    let [hour] = time.split(":").map(Number);
+  
+    if (meridian === "PM" && hour !== 12) hour += 12;
+    if (meridian === "AM" && hour === 12) hour = 0;
+  
+    let endHour = (hour + Number(duration)) % 24;
+    const endMeridian = endHour >= 12 ? "PM" : "AM";
+    const endHour12 = endHour % 12 === 0 ? 12 : endHour % 12;
+  
+    return `${endHour12}:00 ${endMeridian}`;
+  };
+  
+
   return (
-    <div className="meetings-container">
-      <div className="meetings-header">
-        <h2>Meetings</h2>
-        {isAdmin && (
-          <button className="add-meeting-btn" onClick={handleAddNewMeeting}>
-            <FaPlus /> Create Meeting
-          </button>
-        )}
-      </div>
-
-      <div className="meeting-list">
-        {meetings.map((meeting) => (
-          <div key={meeting._id} className="meeting-card">
+    <div className="container">
+      <div className="header">
+      <h2 className="heading">Meetings</h2>
+      {isAdmin && (
+        <button className="primary-button" onClick={handleAddNewMeeting}>
+          <FaPlus style={{ marginRight: "6px" }} /> Add Meeting
+        </button>
+      )}
+    </div>
+    <div className="meetings-list">
+      {meetings.map((meeting) => (
+        <div key={meeting._id} className="meeting-card">
+          <div className="card-content">
             <div className="card-header">
               <h4>{meeting.title}</h4>
               {isAdmin && (
-                <div className="card-actions">
-                  <button onClick={() => handleEdit(meeting)}>
-                    <FaEdit />
-                  </button>
-                  <button onClick={() => handleDelete(meeting._id)}>
-                    <FaTrash />
-                  </button>
+                <div className="admin-buttons">
+                  <button className="icon-button" onClick={() => handleEdit(meeting)}><FaEdit /></button>
+                  <button className="icon-button" onClick={() => handleDelete(meeting._id)}><FaTrash /></button>
                 </div>
               )}
             </div>
-            <p>{meeting.description}</p>
-            <p>
-              <strong>Date:</strong>{" "}
-              {new Date(meeting.date).toLocaleDateString()}
-            </p>
-            <p>
-              <strong>Time:</strong> {meeting.time}
-            </p>
-            <p>
-              <strong>Link:</strong>{" "}
-              <a
-                href={isAdmin ? meeting.start_url : meeting.link}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {isAdmin ? "Start Meeting" : "Join Meeting"}
-              </a>
-            </p>
-            <button
-              className="sdk-join-btn"
-              onClick={() => handleEnterLobby(meeting, isAdmin)}
-            >
-              Enter Meeting Lobby
+            <p><strong>Date:</strong> {new Date(meeting.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            <p><strong>Time:</strong> {meeting.time} - {calculateEndTime(meeting.time, meeting.duration)}</p>
+            
+            {/* Display task name */}
+            {meeting.taskName && (
+              <p><strong>Task:</strong> {meeting.taskName}</p>
+            )}
+
+            {/* Display participants */}
+            {meeting.usernames && meeting.usernames.length > 0 && (
+              <p><strong>Participants:</strong> {meeting.usernames.join(", ")}</p>
+            )}
+
+            <p><strong>Passcode:</strong> {meeting.passcode}</p>
+        
+            <button className="join-button" onClick={() => {
+              const inputPasscode = prompt("Enter meeting passcode:");
+              if (inputPasscode === meeting.passcode) {
+                window.open(`/meeting/${meeting.roomName}`, '_blank');
+              } else {
+                alert("Incorrect passcode!");
+              }
+            }}>
+              Join Meeting
             </button>
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
+    </div>
+    {isModalOpen && (
+      <div className="modal-overlay">
+        <div className="modal-content">
+          <form onSubmit={handleSubmit}>
+            <h2 className="modal-title">{isNewMeeting ? "Create" : "Edit"} Meeting</h2>
 
-      {isAdmin && isModalOpen && (
-        <div className="modal">
-          <form onSubmit={handleSubmit} className="modal-content">
-            <h3>{isNewMeeting ? "Create Zoom Meeting" : "Edit Meeting"}</h3>
-            <input
-              type="text"
-              name="title"
-              placeholder="Title"
-              value={selectedMeeting.title}
-              onChange={handleChange}
-              required
+            <input name="title" placeholder="Meeting Title" value={selectedMeeting.title} onChange={handleChange} required />
+            <textarea name="description" placeholder="Description" value={selectedMeeting.description} onChange={handleChange} />
+
+            <label>Date</label>
+            <input name="date" type="date" value={selectedMeeting.date} onChange={handleChange} required />
+
+            <label>Duration (hours)</label>
+            <Select
+              options={[1, 2, 3, 4, 5, 6].map(d => ({ value: d, label: `${d} hour${d > 1 ? "s" : ""}` }))}
+              value={selectedMeeting.duration ? { value: selectedMeeting.duration, label: `${selectedMeeting.duration} hour${selectedMeeting.duration > 1 ? "s" : ""}` } : null}
+              onChange={(opt) => setSelectedMeeting(prev => ({ ...prev, duration: opt.value }))}
+              placeholder="Choose duration"
             />
-            <textarea
-              name="description"
-              placeholder="Description"
-              value={selectedMeeting.description}
-              onChange={handleChange}
+
+            <label>Start Time</label>
+            <Select
+              options={generateTimeOptions()}
+              value={selectedMeeting.time ? { value: selectedMeeting.time, label: selectedMeeting.time } : null}
+              onChange={(opt) => setSelectedMeeting(prev => ({ ...prev, time: opt.value }))}
+              placeholder="Choose start time"
             />
-            <input
-              type="date"
-              name="date"
-              value={selectedMeeting.date}
-              onChange={handleChange}
-              required
-            />
-            <input
-              type="time"
-              name="time"
-              value={selectedMeeting.time}
-              onChange={handleChange}
-              required
-            />
-            {isNewMeeting && (
-              <input
-                type="number"
-                name="duration"
-                placeholder="Duration (minutes)"
-                value={selectedMeeting.duration}
-                onChange={handleChange}
-              />
+
+            {selectedMeeting.time && selectedMeeting.duration && (
+              <p className="time-range-preview">
+                Selected: {selectedMeeting.time} - {calculateEndTime(selectedMeeting.time, selectedMeeting.duration)}
+              </p>
             )}
-            {!isNewMeeting && (
-              <input
-                type="url"
-                name="link"
-                placeholder="Meeting Link"
-                value={selectedMeeting.link}
-                onChange={handleChange}
-              />
-            )}
-            <div className="modal-actions">
-              <button type="submit">{isNewMeeting ? "Create" : "Update"}</button>
-              <button type="button" onClick={() => setIsModalOpen(false)}>
-                Cancel
+
+            <input name="passcode" placeholder="Meeting Passcode" value={selectedMeeting.passcode} onChange={handleChange} required />
+
+            <label>Task</label>
+            <Select
+              options={tasks.map(task => ({ value: task._id, label: task.title }))}
+              value={tasks.find(task => task._id === selectedTask) ? {
+                value: selectedTask,
+                label: tasks.find(task => task._id === selectedTask).title
+              } : null}
+              onChange={handleTaskChange}
+              placeholder="Select a task..."
+            />
+
+            <label>Participants</label>
+            <Select
+              isMulti
+              options={taskUsers.map(user => ({ value: user._id, label: user.name }))}
+              value={taskUsers.filter(user => selectedParticipants.includes(user._id)).map(user => ({ value: user._id, label: user.name }))}
+              onChange={(selected) => setSelectedParticipants(selected.map(opt => opt.value))}
+              isLoading={loadingUsers}
+              placeholder="Select participants..."
+            />
+
+            <div className="modal-buttons">
+              <button className="primary-button" type="submit">
+                {isNewMeeting ? "Create Meeting" : "Update Meeting"}
               </button>
+              <button type="button" className="secondary-button" onClick={() => setIsModalOpen(false)}>Cancel</button>
             </div>
           </form>
         </div>
-      )}
-
-      {/* Zoom Embedded SDK mount point */}
-      <div id="meetingSDKElement" style={{ width: "100%", height: "600px", marginTop: "2rem" }}></div>
+      </div>
+    )}
     </div>
   );
 };

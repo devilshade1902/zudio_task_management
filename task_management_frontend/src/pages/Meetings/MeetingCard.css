@@ -1,84 +1,206 @@
-.meetings-container {
+.container {
+  max-width: 1200px;
+  margin: 0px;
+  padding: 20px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.heading {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #0c056d;
+}
+
+.primary-button {
+  background-color: #0c056d;
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: background-color 0.3s ease;
+}
+
+.primary-button:hover {
+  background-color: #11079e;
+}
+
+.meetings-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  margin-top: 30px;
+}
+
+.meeting-card {
+  background-color: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.meeting-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-header h4 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #0c056d;
+  margin: 0;
+}
+
+.admin-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.icon-button {
+  background: none;
+  border: none;
+  color: #333;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+
+.icon-button:hover {
+  color: #0c056d;
+}
+
+.desc {
+  margin: 10px 0;
+  color: #555;
+}
+
+.info {
+  font-size: 0.9rem;
+  color: #777;
+  margin-bottom: 5px;
+}
+
+.join-button {
+  background-color: #11079e;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.join-button:hover {
+  background-color: #0c056d;
+}
+
+/* Modal Base */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 15, 30, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+/* Compact Modal Content */
+.modal-content {
+  background: #ffffff !important;
+  border-radius: 16px;
   padding: 20px;
   width: 100%;
-  box-sizing: border-box; /* ensures padding doesn't overflow */
+  max-width: 520px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  animation: fadeIn 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
-  
-  .meetings-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: relative;
+
+.modal-title {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: #0c056d;
+}
+
+/* Form Inside Modal */
+.modal-content form {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.modal-content input,
+.modal-content textarea,
+.modal-content select {
+  font-size: 1rem;
+  padding: 5px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.modal-content select[multiple] {
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+/* Modal Action Buttons */
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.time-range-preview {
+  font-weight: 600;
+  color: #0c056d;
+}
+
+/* Fade-in Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
   }
-  
-  .add-meeting-btn {
-    position: absolute;
-    right: 0;
-    top: 0;
-    background-color: #0c056d;
-    color: white;
-    padding: 8px 16px;
-    border: none;
-    border-radius: 5px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    cursor: pointer;
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
-  
-  .meeting-list {
-    margin-top: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-  
-  .meeting-card {
-    background: #f9f9f9;
-    padding: 15px;
-    border-left: 5px solid #11079e;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  }
-  
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .card-actions button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    margin-left: 8px;
-  }
-  
-  .modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.4);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .modal-content {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    width: 400px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-  }
-  
+}
