@@ -1,70 +1,107 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { FaBell, FaExclamationCircle, FaCheckCircle, FaTimes, FaInfoCircle } from 'react-icons/fa';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { FaBell, FaExclamationCircle, FaCheckCircle, FaTimes, FaInfoCircle, FaCalendarPlus, FaCalendarTimes, FaCalendarCheck, FaTrash } from 'react-icons/fa';
 import { CgProfile } from 'react-icons/cg';
 import { Link } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import axios from 'axios';
-import io from 'socket.io-client';
+import socket from '../../socket'; // Import shared socket
 import './Topbar.css';
-
-const socket = io('http://localhost:5001', {
-  withCredentials: true,
-  transports: ['websocket', 'polling'],
-  reconnection: true,
-  reconnectionAttempts: 10,
-  reconnectionDelay: 1000,
-  timeout: 20000,
-});
 
 const Topbar = ({ isOpen, toggle }) => {
   const [name, setName] = useState('');
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const modalRef = useRef(null);
+  const [viewedIds, setViewedIds] = useState(() => {
+    const stored = localStorage.getItem(`viewedNotificationIds_${name}`);
+    return stored ? JSON.parse(stored) : [];
+  });
+  const [isFetching, setIsFetching] = useState(false);
+  const fetchNotificationsRef = useRef(null); // Ref to hold stable fetchNotifications
+
+  // Fetch notifications function
+  const fetchNotifications = useCallback(async (userName, currentViewedIds) => {
+    if (isFetching || !userName || userName === 'Guest') {
+      console.log('Skipping fetch in Topbar: already fetching or invalid user');
+      return;
+    }
+    setIsFetching(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.log('No token, skipping fetchNotifications in Topbar');
+        setNotifications([]);
+        return;
+      }
+      console.log('Fetching notifications for user in Topbar:', userName);
+      const res = await axios.get('http://localhost:5001/api/notifications', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      console.log('API response in Topbar:', res.data);
+      setNotifications(res.data.filter((notification) => !currentViewedIds.includes(notification._id) || new Date(notification.createdAt) > new Date(Date.now() - 24 * 60 * 60 * 1000)));
+    } catch (err) {
+      console.error('Error fetching notifications in Topbar:', err.response?.data?.message || err.message);
+    } finally {
+      setIsFetching(false);
+    }
+  }, [isFetching]); // viewedIds removed from here
+
+  // Store fetchNotifications in a ref
+  useEffect(() => {
+    fetchNotificationsRef.current = fetchNotifications;
+  }, [fetchNotifications]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
+    let userName = 'Guest';
     if (token) {
       try {
         const decoded = jwtDecode(token);
-        const userName = decoded.name || 'User';
-        console.log('Decoded user name:', userName);
+        userName = decoded.name || 'User';
         setName(userName);
+        const storedViewedIds = JSON.parse(localStorage.getItem(`viewedNotificationIds_${userName}`) || '[]');
+        setViewedIds(storedViewedIds);
         socket.emit('join', userName.trim().toLowerCase());
-        fetchNotifications(userName);
+        if (userName !== 'Guest') {
+          // Call fetchNotifications using the ref with the current viewedIds
+          fetchNotificationsRef.current(userName, storedViewedIds);
+        }
       } catch (err) {
-        console.error('Error decoding token:', err);
+        console.error('Error decoding token in Topbar:', err);
         setName('Guest');
         setNotifications([]);
       }
     } else {
-      console.log('No token found, setting name to Guest');
       setName('Guest');
       setNotifications([]);
     }
 
-    socket.on('connect', () => {
-      console.log('Connected to Socket.IO server from Topbar');
-    });
-
-    socket.on('newNotification', (notification) => {
-      console.log('Received new notification:', notification);
-      setNotifications((prev) => [notification, ...prev]);
-    });
-
-    socket.on('connect_error', (err) => {
-      console.error('Socket.IO connect_error:', err.message);
-      if (name !== 'Guest') {
-        fetchNotifications(name);
+    const onConnect = () => {
+      console.log('Connected to Socket.IO server from Topbar, socket ID:', socket.id);
+      if (userName && userName !== 'Guest') {
+        socket.emit('join', userName.trim().toLowerCase());
       }
-    });
+    };
+
+    const onConnectError = (err) => {
+      console.error('Socket.IO connect_error in Topbar:', err.message);
+      console.log('Skipping fetch on connect error in Topbar');
+    };
+
+    socket.on('connect', onConnect);
+    socket.on('connect_error', onConnectError);
 
     return () => {
-      socket.off('connect');
-      socket.off('newNotification');
-      socket.off('connect_error');
+      socket.off('connect', onConnect);
+      socket.off('connect_error', onConnectError);
     };
-  }, [name]);
+  }, []); // Empty dependency array for initial setup and connection
+
+  useEffect(() => {
+    if (name && name !== 'Guest') {
+      localStorage.setItem(`viewedNotificationIds_${name}`, JSON.stringify(viewedIds));
+    }
+  }, [viewedIds, name]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -76,57 +113,30 @@ const Topbar = ({ isOpen, toggle }) => {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
-  const fetchNotifications = async (userName) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.log('No token, skipping fetchNotifications');
-        setNotifications([]);
-        return;
-      }
-      console.log('Fetching notifications for user:', userName);
-      const res = await axios.get('http://localhost:5001/api/notifications', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      console.log('API response:', res.data);
-      const now = new Date();
-      const filteredNotifications = res.data.filter((notification) => {
-        const createdAt = new Date(notification.createdAt);
-        const hoursDiff = (now - createdAt) / (1000 * 60 * 60);
-        return hoursDiff <= 24;
-      });
-      console.log('Filtered notifications:', filteredNotifications);
-      setNotifications(filteredNotifications);
-    } catch (err) {
-      console.error('Error fetching notifications:', err.response?.data?.message || err.message);
-      setTimeout(() => {
-        if (userName && localStorage.getItem('token')) {
-          console.log('Retrying fetchNotifications for user:', userName);
-          fetchNotifications(userName);
-        }
-      }, 1000);
-    }
-  };
-
   const markAsRead = async (id) => {
     try {
       const token = localStorage.getItem('token');
       await axios.put(`http://localhost:5001/api/notifications/${id}/read`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log(`Marked notification ${id} as read`);
+      console.log(`Marked notification ${id} as read from Topbar`);
       setNotifications((prev) => prev.filter((n) => n._id !== id));
+      setViewedIds((prev) => {
+        const updated = [...prev, id];
+        localStorage.setItem(`viewedNotificationIds_${name}`, JSON.stringify(updated));
+        return updated;
+      });
     } catch (err) {
-      console.error('Error marking notification as read:', err.response?.data?.message || err.message);
+      console.error('Error marking notification as read from Topbar:', err.response?.data?.message || err.message);
     }
   };
 
   const handleSignOut = () => {
-    console.log('Signing out, clearing token and dismissed notifications');
+    console.log('Signing out, clearing token');
     localStorage.removeItem('token');
-    localStorage.removeItem('dismissedNotificationIds');
     setName('Guest');
     setNotifications([]);
+    setViewedIds([]);
   };
 
   const toggleNotifications = () => {
@@ -180,6 +190,10 @@ const Topbar = ({ isOpen, toggle }) => {
                     {notification.type === 'NEW_TASK' && <FaBell />}
                     {notification.type === 'COMPLETED' && <FaCheckCircle />}
                     {notification.type === 'STATUS_CHANGED' && <FaInfoCircle />}
+                    {notification.type === 'NEW_MEETING' && <FaCalendarPlus />}
+                    {notification.type === 'UPDATED_MEETING' && <FaCalendarCheck />}
+                    {notification.type === 'DELETED_MEETING' && <FaCalendarTimes />}
+                    {notification.type === 'DELETED_TASK' && <FaTrash />}
                   </div>
                   <div className="notification-content">
                     <p>{notification.message}</p>

@@ -16,17 +16,27 @@ const CalendarView = () => {
       try {
         const token = localStorage.getItem('token');
         if (!token) {
-          console.log('No token, skipping fetchMeetings');
+          console.warn('No token found, skipping fetchMeetings');
           return;
         }
-        const res = await axios.get('http://localhost:5001/api/meetings', {
+        const res = await axios.get('http://localhost:5001/meetings/get-meetings', {
           headers: { Authorization: `Bearer ${token}` },
         });
         console.log('Fetched meetings:', res.data);
 
+        if (!Array.isArray(res.data) || res.data.length === 0) {
+          console.warn('No meetings found or invalid data format:', res.data);
+          setEvents([]);
+          return;
+        }
+
         const formattedEvents = res.data.map((meeting) => {
           const startDateTime = moment(`${meeting.date} ${meeting.time}`, 'YYYY-MM-DD HH:mm').toDate();
           const endDateTime = moment(startDateTime).add(meeting.duration, 'minutes').toDate();
+
+          if (!moment(startDateTime).isValid() || !moment(endDateTime).isValid()) {
+            console.warn(`Invalid date/time for meeting ${meeting._id}:`, { date: meeting.date, time: meeting.time });
+          }
 
           return {
             id: meeting._id,
@@ -36,11 +46,16 @@ const CalendarView = () => {
             description: meeting.description,
             link: meeting.link,
           };
-        });
+        }).filter(event => moment(event.start).isValid() && moment(event.end).isValid());
 
+        console.log('Formatted events:', formattedEvents);
         setEvents(formattedEvents);
       } catch (err) {
-        console.error('Error fetching meetings:', err.response?.data?.message || err.message);
+        console.error('Error fetching meetings:', {
+          message: err.message,
+          status: err.response?.status,
+          data: err.response?.data,
+        });
       }
     };
 

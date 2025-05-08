@@ -3,6 +3,7 @@ const router = express.Router();
 const Task = require('../models/Task');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+const Message = require('../models/Message');
 const { auth, restrictTo } = require('../middleware/auth');
 
 // Get all tasks with aggregated stats
@@ -71,23 +72,35 @@ router.post('/', auth, restrictTo('Admin'), async (req, res) => {
 
     const newTask = await task.save();
 
-    // Create notifications for assigned users
-    if (normalizedUsers.length > 0) {
-      const notifications = normalizedUsers.map(user => ({
-        user,
-        message: `You have been assigned a new task: ${task.title}`,
-        type: 'NEW_TASK',
-        taskId: newTask._id,
-      }));
-      const savedNotifications = await Notification.insertMany(notifications);
-
-      // Emit WebSocket events
-      const io = req.app.get('io');
-      savedNotifications.forEach(notification => {
-        console.log(`Emitting newNotification to room: ${notification.user}`);
-        io.to(notification.user).emit('newNotification', notification);
-      });
+    // Initialize chat room for Pending or In Progress tasks
+    if (['Pending', 'In Progress'].includes(newTask.status)) {
+      const chatRooms = req.app.get('chatRooms') || {};
+      const normalizedRoom = `task-${newTask._id}`;
+      if (!chatRooms[normalizedRoom]) {
+        chatRooms[normalizedRoom] = [];
+        console.log(`Initialized chat room: ${normalizedRoom}`);
+      }
     }
+
+    // Create notifications for assigned users and admins, ensuring no duplicates
+    const admins = await User.find({ role: 'Admin' });
+    const adminUsers = admins.map(admin => admin.name.toLowerCase());
+    const uniqueUsers = new Set([...normalizedUsers, ...adminUsers]);
+    const notifications = Array.from(uniqueUsers).map(user => ({
+      user,
+      message: `New task "${task.title}" created`,
+      type: 'NEW_TASK',
+      taskId: newTask._id,
+    }));
+
+    const savedNotifications = await Notification.insertMany(notifications, { ordered: false });
+
+    // Emit WebSocket events
+    const io = req.app.get('io');
+    savedNotifications.forEach(notification => {
+      console.log(`Emitting NEW_TASK notification to room: ${notification.user} for task ${newTask._id}`, notification);
+      io.to(notification.user).emit('newNotification', notification);
+    });
 
     // Create overdue notification if dueDate is within 24 hours
     if (task.dueDate) {
@@ -95,18 +108,15 @@ router.post('/', auth, restrictTo('Admin'), async (req, res) => {
       const now = new Date();
       const oneDayFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
       if (dueDate <= oneDayFromNow && dueDate > now && normalizedUsers.length > 0) {
-        const notifications = normalizedUsers.map(user => ({
+        const overdueNotifications = normalizedUsers.map(user => ({
           user,
           message: `Task "${task.title}" is due soon on ${dueDate.toLocaleDateString()}`,
           type: 'OVERDUE',
           taskId: newTask._id,
         }));
-        const savedNotifications = await Notification.insertMany(notifications);
-
-        // Emit WebSocket events
-        const io = req.app.get('io');
-        savedNotifications.forEach(notification => {
-          console.log(`Emitting newNotification to room: ${notification.user}`);
+        const savedOverdueNotifications = await Notification.insertMany(overdueNotifications, { ordered: false });
+        savedOverdueNotifications.forEach(notification => {
+          console.log(`Emitting OVERDUE notification to room: ${notification.user} for task ${newTask._id}`, notification);
           io.to(notification.user).emit('newNotification', notification);
         });
       }
@@ -126,7 +136,39 @@ router.delete('/:id', auth, restrictTo('Admin'), async (req, res) => {
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
-    await Notification.deleteMany({ taskId: task._id });
+
+    // Delete chat room and messages
+    const normalizedRoom = `task-${task._id}`;
+    const chatRooms = req.app.get('chatRooms') || {};
+    if (chatRooms[normalizedRoom]) {
+      const io = req.app.get('io');
+      io.to(normalizedRoom).emit('message', { username: 'System', message: 'This chat room has been deleted.' });
+      delete chatRooms[normalizedRoom];
+      console.log(`Deleted chat room: ${normalizedRoom}`);
+    }
+    await Message.deleteMany({ roomId: task._id });
+
+    // Create notifications for assigned users and admins, ensuring no duplicates
+    const admins = await User.find({ role: 'Admin' });
+    const adminUsers = admins.map(admin => admin.name.toLowerCase());
+    const uniqueUsers = new Set([...task.assignedUsers, ...adminUsers]);
+    const notifications = Array.from(uniqueUsers).map(user => ({
+      user,
+      message: `Task "${task.title}" has been deleted`,
+      type: 'DELETED_TASK',
+      taskId: task._id,
+      isRead: true, // Mark as read to skip client-side marking
+    }));
+
+    const savedNotifications = await Notification.insertMany(notifications, { ordered: false });
+    const io = req.app.get('io');
+    savedNotifications.forEach(notification => {
+      console.log(`Emitting DELETED_TASK notification to room: ${notification.user} for task ${task._id}`, notification);
+      io.to(notification.user).emit('newNotification', notification);
+    });
+
+    // Delete only non-DELETED_TASK notifications
+    await Notification.deleteMany({ taskId: task._id, type: { $ne: 'DELETED_TASK' } });
     await task.deleteOne();
     res.json({ message: 'Task deleted' });
   } catch (err) {
@@ -167,6 +209,7 @@ router.put('/:id', auth, async (req, res) => {
     }
 
     // Update fields based on role
+    const previousStatus = task.status;
     if (!isAdmin) {
       if (Object.keys(req.body).some(key => key !== 'status')) {
         return res.status(403).json({ message: 'Non-admins can only update task status' });
@@ -184,22 +227,59 @@ router.put('/:id', auth, async (req, res) => {
       task.category = req.body.category ?? task.category;
     }
 
+    // Manage chat room based on status
+    const normalizedRoom = `task-${task._id}`;
+    const chatRooms = req.app.get('chatRooms') || {};
+    const io = req.app.get('io');
+    if (task.status !== previousStatus) {
+      if (['Pending', 'In Progress'].includes(task.status)) {
+        if (!chatRooms[normalizedRoom]) {
+          chatRooms[normalizedRoom] = [];
+          console.log(`Initialized chat room: ${normalizedRoom}`);
+        }
+      } else if (task.status === 'Completed') {
+        if (chatRooms[normalizedRoom]) {
+          io.to(normalizedRoom).emit('message', { username: 'System', message: 'This chat room has been deleted.' });
+          delete chatRooms[normalizedRoom];
+          console.log(`Deleted chat room: ${normalizedRoom}`);
+        }
+        await Message.deleteMany({ roomId: task._id });
+      }
+    }
+
     const updatedTask = await task.save();
 
-    // Create notifications for completion
-    if (req.body.status === 'Completed' && task.assignedUsers.length > 0) {
-      const notifications = task.assignedUsers.map(user => ({
+    // Create notifications only for status changes, skip if recently completed
+    let notifications = [];
+    if (req.body.status && req.body.status !== previousStatus && task.assignedUsers.length > 0) {
+      if (req.body.status === 'Completed') {
+        // Check if a COMPLETED notification exists within the last 10 seconds
+        const recentNotification = await Notification.findOne({
+          taskId: task._id,
+          type: 'COMPLETED',
+          createdAt: { $gte: new Date(Date.now() - 10 * 1000) },
+        });
+        if (recentNotification) {
+          console.log(`Skipping COMPLETED notification for task ${task._id}: recent notification found`, recentNotification);
+          res.json(updatedTask);
+          return;
+        }
+      }
+      const admins = await User.find({ role: 'Admin' });
+      const adminUsers = admins.map(admin => admin.name.toLowerCase());
+      const uniqueUsers = new Set([...task.assignedUsers, ...adminUsers]);
+      notifications = Array.from(uniqueUsers).map(user => ({
         user,
-        message: `Task "${task.title}" has been completed`,
-        type: 'COMPLETED',
+        message: `Task "${task.title}" status changed to ${req.body.status}`,
+        type: req.body.status === 'Completed' ? 'COMPLETED' : 'STATUS_CHANGED',
         taskId: task._id,
       }));
-      const savedNotifications = await Notification.insertMany(notifications);
+    }
 
-      // Emit WebSocket events
-      const io = req.app.get('io');
+    if (notifications.length > 0) {
+      const savedNotifications = await Notification.insertMany(notifications, { ordered: false });
       savedNotifications.forEach(notification => {
-        console.log(`Emitting newNotification to room: ${notification.user}`);
+        console.log(`Emitting STATUS_CHANGED/COMPLETED notification to room: ${notification.user} for task ${task._id}`, notification);
         io.to(notification.user).emit('newNotification', notification);
       });
     }
@@ -212,18 +292,15 @@ router.put('/:id', auth, async (req, res) => {
         const now = new Date();
         const oneDayFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
         if (dueDate <= oneDayFromNow && dueDate > now && task.assignedUsers.length > 0) {
-          const notifications = task.assignedUsers.map(user => ({
+          const overdueNotifications = task.assignedUsers.map(user => ({
             user,
             message: `Task "${task.title}" is due soon on ${dueDate.toLocaleDateString()}`,
             type: 'OVERDUE',
             taskId: task._id,
           }));
-          const savedNotifications = await Notification.insertMany(notifications);
-
-          // Emit WebSocket events
-          const io = req.app.get('io');
-          savedNotifications.forEach(notification => {
-            console.log(`Emitting newNotification to room: ${notification.user}`);
+          const savedOverdueNotifications = await Notification.insertMany(overdueNotifications, { ordered: false });
+          savedOverdueNotifications.forEach(notification => {
+            console.log(`Emitting OVERDUE notification to room: ${notification.user} for task ${task._id}`, notification);
             io.to(notification.user).emit('newNotification', notification);
           });
         }
@@ -253,32 +330,47 @@ router.get('/mytasks', async (req, res) => {
 });
 
 // Mark a task as completed
-router.put('/mytasks/:id/complete', async (req, res) => {
+router.put('/mytasks/:id/complete', auth, async (req, res) => {
   try {
     const task = await Task.findById(req.params.id);
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
+    if (!task.assignedUsers.includes(req.user.name.toLowerCase())) {
+      return res.status(403).json({ message: 'Not authorized to complete this task' });
+    }
     task.status = 'Completed';
     const updatedTask = await task.save();
 
-    // Create completion notifications
-    if (task.assignedUsers.length > 0) {
-      const notifications = task.assignedUsers.map(user => ({
-        user,
-        message: `Task "${task.title}" has been completed`,
-        type: 'COMPLETED',
-        taskId: task._id,
-      }));
-      const savedNotifications = await Notification.insertMany(notifications);
-
-      // Emit WebSocket events
-      const io = req.app.get('io');
-      savedNotifications.forEach(notification => {
-        console.log(`Emitting newNotification to room: ${notification.user}`);
-        io.to(notification.user).emit('newNotification', notification);
-      });
+    // Delete chat room and messages
+    const normalizedRoom = `task-${task._id}`;
+    const chatRooms = req.app.get('chatRooms') || {};
+    const io = req.app.get('io');
+    if (chatRooms[normalizedRoom]) {
+      io.to(normalizedRoom).emit('message', { username: 'System', message: 'This chat room has been deleted.' });
+      delete chatRooms[normalizedRoom];
+      console.log(`Deleted chat room: ${normalizedRoom}`);
     }
+    await Message.deleteMany({ roomId: task._id });
+
+    // Create completion notifications, ensuring no duplicates
+    const admins = await User.find({ role: 'Admin' });
+    const adminUsers = admins.map(admin => admin.name.toLowerCase());
+    const uniqueUsers = new Set([...task.assignedUsers, ...adminUsers]);
+    const notifications = Array.from(uniqueUsers).map(user => ({
+      user,
+      message: `Task "${task.title}" has been completed`,
+      type: 'COMPLETED',
+      taskId: task._id,
+    }));
+
+    const savedNotifications = await Notification.insertMany(notifications, { ordered: false });
+
+    // Emit WebSocket events
+    savedNotifications.forEach(notification => {
+      console.log(`Emitting COMPLETED notification to room: ${notification.user} for task ${task._id}`, notification);
+      io.to(notification.user).emit('newNotification', notification);
+    });
 
     // Delete overdue notifications
     await Notification.deleteMany({ taskId: task._id, type: 'OVERDUE' });
