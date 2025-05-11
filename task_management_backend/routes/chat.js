@@ -7,6 +7,10 @@ router.post('/:roomId/messages', async (req, res) => {
   const { roomId } = req.params;
   const { username, message } = req.body;
 
+  if (typeof username !== "string" || typeof message !== "string") {
+    return res.status(400).send("Invalid data. Username and message must be strings.");
+  }
+
   try {
     const newMessage = new Message({ roomId, username, message });
     await newMessage.save();
@@ -29,5 +33,32 @@ router.get('/:roomId/messages', async (req, res) => {
     res.status(500).send('Failed to fetch messages');
   }
 });
+// DELETE: Delete a message by ID
+router.delete('/messages/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const deleted = await Message.findByIdAndDelete(id);
+    if (!deleted) {
+      return res.status(404).send("Message not found");
+    }
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Error deleting message:', error);
+    res.status(500).send('Failed to delete message');
+  }
+});
+// DELETE: Delete all messages (⚠️ For testing only)
+router.delete('/clear/all', async (req, res) => {
+  try {
+    await Message.deleteMany({});
+    res.status(200).send("All messages deleted");
+  } catch (err) {
+    console.error("Failed to delete all messages:", err);
+    res.status(500).send("Error clearing messages");
+  }
+});
+
+
 
 module.exports = router;

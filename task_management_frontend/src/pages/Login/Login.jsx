@@ -1,4 +1,3 @@
-// src/pages/Login/Login.jsx
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { auth, provider, signInWithPopup } from "../../firebaseConfig";
@@ -8,13 +7,12 @@ import "./Login.css";
 const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
-  const [isLoading, setIsLoading] = useState(false);
-
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,9 +22,19 @@ const Login = () => {
         email: formData.email,
         password: formData.password,
       });
-      localStorage.setItem('token', response.data.token);
-      navigate("/dashboard");
+
+      console.log("LOGIN RESPONSE:", response.data); // ✅ DEBUG LINE
+
+      if (response.data && response.data.user) {
+        const username = response.data.user.name || "Unknown User";
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('username', username);
+        navigate("/dashboard");
+      } else {
+        throw new Error("Invalid response from server.");
+      }
     } catch (err) {
+      console.error("Login error:", err);
       setError(err.response?.data?.message || "Failed to login. Please try again.");
     } finally {
       setIsLoading(false);
@@ -36,8 +44,8 @@ const Login = () => {
   const handleGoogleLogin = async () => {
     try {
       const result = await signInWithPopup(auth, provider);
-      console.log("Google User:", result.user);
       localStorage.setItem('token', result.user.accessToken);
+      localStorage.setItem('username', result.user.displayName);
       navigate("/dashboard");
     } catch (error) {
       console.error("Google Sign-In Error:", error);
@@ -61,8 +69,8 @@ const Login = () => {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className="form-control" // Matches CSS
               required
+              className="form-control"
             />
           </div>
           <div className="form-group">
@@ -72,8 +80,8 @@ const Login = () => {
               name="password"
               value={formData.password}
               onChange={handleChange}
-              className="form-control" // Matches CSS
               required
+              className="form-control"
             />
           </div>
           <button type="submit" className="btn-primary" disabled={isLoading}>
@@ -89,7 +97,6 @@ const Login = () => {
         </p>
       </div>
 
-      {/* Error Popup */}
       {error && (
         <div className="error-popup-overlay">
           <div className="error-popup">

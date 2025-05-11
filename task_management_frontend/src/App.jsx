@@ -11,27 +11,32 @@ import ForgotPassword from './components/Forgotpassword/ForgotPassword';
 import VerifyOtp from './components/VerifyOtp/VerifyOtp';
 import CalendarView from './pages/calendar/Calendar';
 import ChatRoom from './pages/Chat/ChatRoom';
-import TaskList from './pages/Chat/TaskList';
 import MeetingRoom from "./pages/Meetings/MeetingRoom";
 
 function App() {
+  // Wrapper component to handle dynamic roomId and username for ChatRoom
   function ChatRoomWrapper() {
     const { roomId } = useParams();
     const location = useLocation();
-    console.log('Navigated to roomId:', roomId);
-    console.log('Location state:', location.state);
+    console.log("Navigated to roomId:", roomId);
+    console.log("Location state:", location.state);
   
-    const username = location.state?.username || 'Guest';
+    // Get username from `location.state` or fallback to localStorage or default to "Guest"
+    const username = location.state?.username || localStorage.getItem("username") || "Guest";
     return <ChatRoom roomId={roomId} username={username} />;
   }
+
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public Routes */}
         <Route path="/" element={<LoginSignup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/verify-otp" element={<VerifyOtp />} />
         <Route path="/meeting/:roomName" element={<MeetingRoom />} />
-        <Route path="chat/:roomId" element={<ChatRoomWrapper />} />
+        <Route path="/chatroom/:roomId" element={<ChatRoomWrapper />} />
+
+        {/* Protected Routes (after login) */}
         <Route path="/dashboard" element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="view-tasks" element={<ViewTasks />} />
@@ -39,12 +44,10 @@ function App() {
           <Route path="mytasks" element={<MyTasks />} />
           <Route path="meetings" element={<MeetingCard />} />
           <Route path="calendar" element={<CalendarView />} />
-          <Route path="tasklist" element={<TaskList />} />
         </Route>
       </Routes>
     </BrowserRouter>
   );
 }
-
 
 export default App;

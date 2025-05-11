@@ -1,7 +1,8 @@
+// MyTasks.jsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
-import { FaCheck } from "react-icons/fa";
+import { FaCheck, FaComments } from "react-icons/fa";
 import "./MyTasks.css";
 
 const MyTasks = () => {
@@ -30,9 +31,12 @@ const MyTasks = () => {
 
     const fetchMyTasks = async () => {
       try {
-        const response = await axios.get(`http://localhost:5001/api/tasks/mytasks?name=${encodeURIComponent(name)}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await axios.get(
+          `http://localhost:5001/api/tasks/mytasks?name=${encodeURIComponent(name)}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         setTasks(response.data.tasks);
         setLoading(false);
       } catch (err) {
@@ -50,13 +54,19 @@ const MyTasks = () => {
   const handleMarkAsCompleted = async (taskId) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.put(`http://localhost:5001/api/tasks/mytasks/${taskId}/complete`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.put(
+        `http://localhost:5001/api/tasks/mytasks/${taskId}/complete`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       if (response.status === 200) {
-        setTasks(tasks.map(task =>
-          task._id === taskId ? { ...task, status: "Completed" } : task
-        ));
+        setTasks(
+          tasks.map((task) =>
+            task._id === taskId ? { ...task, status: "Completed" } : task
+          )
+        );
       } else {
         throw new Error("Unexpected response status");
       }
@@ -64,6 +74,12 @@ const MyTasks = () => {
       console.error("Error marking task as completed:", err);
       alert("Failed to mark task as completed. Please try again.");
     }
+  };
+
+  const openChatRoom = (taskId,tasktitle) => {
+    const chatUrl = `/chatroom/${taskId}?username=${encodeURIComponent(name)}&task=${encodeURIComponent(tasktitle)}`;
+
+    window.open(chatUrl, "_blank");
   };
 
   const getPriorityColor = (priority) => {
@@ -111,14 +127,25 @@ const MyTasks = () => {
                 </p>
                 <p><strong>Employees:</strong> {task.employeesAssigned}</p>
               </div>
-              {task.status !== "Completed" && (
+              <div className="mytasks-task-actions">
+                {task.status !== "Completed" && (
+                  <button
+                    className="mytasks-complete-btn"
+                    onClick={() => handleMarkAsCompleted(task._id)}
+                  >
+                    <FaCheck /> Mark as Completed
+                  </button>
+                )}
                 <button
-                  className="mytasks-complete-btn"
-                  onClick={() => handleMarkAsCompleted(task._id)}
+                  className="mytasks-chat-btn improved-chat-btn"
+                  onClick={() => openChatRoom(task._id,task.title)}
+                  title="Open chat room"
                 >
-                  <FaCheck /> Mark as Completed
+                  <FaComments style={{ marginRight: "6px" }} />
+                  Open Chat
                 </button>
-              )}
+
+              </div>
             </div>
           ))
         )}
