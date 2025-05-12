@@ -12,6 +12,7 @@ import VerifyOtp from './components/VerifyOtp/VerifyOtp';
 import CalendarView from './pages/calendar/Calendar';
 import ChatRoom from './pages/Chat/ChatRoom';
 import MeetingRoom from "./pages/Meetings/MeetingRoom";
+import Report from './pages/Report/Report';
 
 function App() {
   // Wrapper component to handle dynamic roomId and username for ChatRoom
@@ -44,6 +45,8 @@ function App() {
           <Route path="mytasks" element={<MyTasks />} />
           <Route path="meetings" element={<MeetingCard />} />
           <Route path="calendar" element={<CalendarView />} />
+          <Route path="report" element={<Report />} />
+
         </Route>
       </Routes>
     </BrowserRouter>

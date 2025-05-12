@@ -1,0 +1,67 @@
+/* General styling for the reports page */
+.reports-page {
+  font-family: 'Arial', sans-serif;
+  padding: 20px;
+  background-color: #f9f9f9;
+  color: #333;
+}
+
+/* Title styling */
+.title {
+  text-align: center;
+  color: #4CAF50;
+  margin-bottom: 20px;
+}
+
+/* Section styling */
+.task-report, .user-report {
+  margin-bottom: 30px;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #fff;
+}
+
+/* Table styling */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+table thead {
+  background-color: #4CAF50;
+  color: white;
+}
+
+table th, table td {
+  text-align: left;
+  padding: 10px;
+  border: 1px solid #ddd;
+}
+
+table tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+table tr:hover {
+  background-color: #e9e9e9;
+}
+
+/* List styling */
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+ul li {
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+
+/* Error message styling */
+.error {
+  text-align: center;
+  color: red;
+  font-weight: bold;
+}

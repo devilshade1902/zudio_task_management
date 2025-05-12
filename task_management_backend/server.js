@@ -8,6 +8,7 @@ const { Server } = require('socket.io');
 // Import models and routes
 const tasksRouter = require('./routes/tasks');
 const chatRouter = require('./routes/chat');
+const reportRouter=require('./routes/report')
 const userRoutes = require('./routes/users');
 const notificationsRouter = require('./routes/notifications');
 const meetingRoutes = require('./routes/meetings');
@@ -51,6 +52,7 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/chat', chatRouter); // Chat feature routes
 app.use('/meetings', meetingRoutes);
 app.use('/api', meetingRoutes); 
+app.use('/reports',reportRouter)
 
 // Socket.IO Logic for Real-Time Chat
 io.on("joinRoom", async ({ room, username }) => {

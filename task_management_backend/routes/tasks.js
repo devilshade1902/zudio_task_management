@@ -290,4 +290,35 @@ router.put('/mytasks/:id/complete', async (req, res) => {
   }
 });
 
+router.get("/report", async (req, res) => {
+  try {
+    const tasks = await Task.find();
+
+    const report = {
+      total: tasks.length,
+      completed: tasks.filter(t => t.status === "Completed").length,
+      pending: tasks.filter(t => t.status !== "Completed").length,
+      byUser: {},
+      byPriority: {},
+    };
+
+    tasks.forEach(task => {
+      const user = task.assignedTo || task.employeesAssigned || "Unassigned";
+
+      report.byUser[user] = report.byUser[user] || { total: 0, completed: 0 };
+      report.byUser[user].total += 1;
+      if (task.status === "Completed") report.byUser[user].completed += 1;
+
+      const priority = task.priority || "Unspecified";
+      report.byPriority[priority] = (report.byPriority[priority] || 0) + 1;
+    });
+
+    res.json(report);
+  } catch (error) {
+    console.error("Error generating report:", error);
+    res.status(500).send("Report generation failed");
+  }
+});
+
+
 module.exports = router;

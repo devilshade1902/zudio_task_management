@@ -48,17 +48,6 @@ router.delete('/messages/:id', async (req, res) => {
     res.status(500).send('Failed to delete message');
   }
 });
-// DELETE: Delete all messages (⚠️ For testing only)
-router.delete('/clear/all', async (req, res) => {
-  try {
-    await Message.deleteMany({});
-    res.status(200).send("All messages deleted");
-  } catch (err) {
-    console.error("Failed to delete all messages:", err);
-    res.status(500).send("Error clearing messages");
-  }
-});
-
 
 
 module.exports = router;
