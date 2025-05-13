@@ -2,31 +2,32 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const axios = require('axios');
 const { Server } = require('socket.io');
 const http = require('http');
-
-const Meeting = require('./models/Meeting');
+const path = require('path');
+const User = require('./models/User');
+const Notification = require('./models/Notification');
 const tasksRouter = require('./routes/tasks');
 const chatRouter = require('./routes/chat');
 const userRoutes = require('./routes/users');
 const notificationsRouter = require('./routes/notifications');
+const meetingRoutes = require('./routes/meetings');
 const { scheduleTaskNotifications } = require('./utils/taskNotifications');
 const { scheduleNotificationCleanup } = require('./utils/cleanupNotifications');
-const meetingRoutes = require('./routes/meetings')
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: 'http://localhost:5173',
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true,
   },
 });
 
 const PORT = process.env.PORT || 5001;
 const chatRooms = {};
+
 // Middleware
 app.use(cors({
   origin: 'http://localhost:5173',
@@ -35,6 +36,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+app.use('/Uploads', express.static(path.join(__dirname, 'Uploads'))); // Serve Uploads folder
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI, {
@@ -44,66 +46,22 @@ mongoose.connect(process.env.MONGODB_URI, {
   .then(() => console.log('Connected to MongoDB Atlas'))
   .catch(err => console.error('MongoDB Atlas connection error:', err));
 
-// Meeting CRUD Routes
-app.get('/api/meetings', async (req, res) => {
-  try {
-    const meetings = await Meeting.find();
-    res.json(meetings);
-  } catch (err) {
-    console.error('Error fetching meetings:', err);
-    res.status(500).send('Error fetching meetings');
-  }
-});
-
-app.post('/api/meetings', async (req, res) => {
-  const { title, description, date, time, duration, link, start_url } = req.body;
-  const newMeeting = new Meeting({ title, description, date, time, duration, link, start_url });
-
-  try {
-    await newMeeting.save();
-    res.status(201).json(newMeeting);
-  } catch (err) {
-    console.error('Error saving meeting:', err);
-    res.status(500).send('Failed to save meeting');
-  }
-});
-
-app.put('/api/meetings/:id', async (req, res) => {
-  const { id } = req.params;
-  const { title, description, date, time, duration, link } = req.body;
-
-  try {
-    const updatedMeeting = await Meeting.findByIdAndUpdate(
-      id,
-      { title, description, date, time, duration, link },
-      { new: true }
-    );
-    res.json(updatedMeeting);
-  } catch (err) {
-    console.error('Error updating meeting:', err);
-    res.status(500).send('Failed to update meeting');
-  }
-});
-
-app.delete('/api/meetings/:id', async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    await Meeting.findByIdAndDelete(id);
-    res.status(200).send('Meeting deleted successfully');
-  } catch (err) {
-    console.error('Error deleting meeting:', err);
-    res.status(500).send('Failed to delete meeting');
-  }
-});
-
 // Socket.IO Connection
-
 io.on('connection', (socket) => {
   console.log('Socket.IO client connected:', socket.id);
 
+  socket.on('join', (username) => {
+    if (username && username !== 'Guest') {
+      const room = username.trim().toLowerCase();
+      const currentRooms = Array.from(socket.rooms).filter(r => r !== socket.id);
+      currentRooms.forEach(r => socket.leave(r));
+      socket.join(room);
+      console.log(`${username} joined room: ${room}, rooms:`, socket.rooms);
+    }
+  });
+
   socket.on('joinRoom', async ({ room, username }) => {
-    const taskId = room.split('-')[1]; // assuming room = task-<taskId>
+    const taskId = room.split('-')[1];
 
     try {
       const task = await Task.findById(taskId);
@@ -118,7 +76,6 @@ io.on('connection', (socket) => {
         return;
       }
 
-      // Add user to room
       if (!chatRooms[room]) chatRooms[room] = [];
       chatRooms[room].push({ id: socket.id, username });
       socket.join(room);
@@ -154,7 +111,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Room Deletion on Task Completion 
+// Room Deletion on Task Completion
 app.delete('/delete-room/:room', (req, res) => {
   const room = req.params.room;
   if (chatRooms[room]) {
@@ -166,20 +123,19 @@ app.delete('/delete-room/:room', (req, res) => {
   }
 });
 
-
 // Make io accessible to routes
 app.set('io', io);
 
-// Additional Routes
+// Routes
 app.use('/api/tasks', tasksRouter);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/chat', chatRouter);
-app.use('/meetings',meetingRoutes );
+app.use('/meetings', meetingRoutes);
 app.use('/api', meetingRoutes);
 
 // Start Task Notification and Cleanup Cron Jobs
-scheduleTaskNotifications(io);
+// scheduleTaskNotifications(io);
 scheduleNotificationCleanup();
 
 // Start Server

@@ -32,7 +32,7 @@ function generateMeetingJWT(roomName, userName) {
       },
       features: {
         livestreaming: 'false',
-        outbound_call: 'false',
+        outbound_call: 'true',
         transcription: 'false',
         recording: 'false',
         'send-groupchat': 'true',

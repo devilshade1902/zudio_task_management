@@ -5,6 +5,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { jwtDecode } from 'jwt-decode';
 import "./ViewTasks.css";
 import Select from 'react-select';
+import socket from "../../socket";
 
 const ViewTasks = () => {
   const [tasks, setTasks] = useState({
@@ -81,6 +82,20 @@ const ViewTasks = () => {
       setLoading(false);
     };
     loadData();
+
+    socket.on('nameChanged', ({ oldName, newName }) => {
+      console.log(`Received name change: ${oldName} -> ${newName}`);
+      // Re-fetch tasks to reflect updated assignedUsers
+      fetchTasks();
+      // Update users list if admin
+      if (isAdmin) {
+        fetchUsers();
+      }
+    });
+
+    return () => {
+      socket.off('nameChanged');
+    };
   }, [isAdmin]);
 
   const handleDelete = async (taskId, status) => {
@@ -216,29 +231,6 @@ const ViewTasks = () => {
       await axios.put(`http://localhost:5001/api/tasks/${movedTask._id}`, taskData, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      // Create notifications for status change
-      if (updatedTask.status === 'Completed' && updatedTask.assignedUsers && updatedTask.assignedUsers.length > 0) {
-        const notifications = updatedTask.assignedUsers.map(user => ({
-          user: user.trim().toLowerCase(),
-          message: `Task "${updatedTask.title}" has been marked as Completed`,
-          type: 'COMPLETED',
-          taskId: updatedTask._id,
-        }));
-        await axios.post('http://localhost:5001/api/notifications', { notifications }, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      } else if (updatedTask.status !== source.droppableId && updatedTask.assignedUsers && updatedTask.assignedUsers.length > 0) {
-        const notifications = updatedTask.assignedUsers.map(user => ({
-          user: user.trim().toLowerCase(),
-          message: `Task "${updatedTask.title}" status changed to ${updatedTask.status}`,
-          type: 'STATUS_CHANGED',
-          taskId: updatedTask._id,
-        }));
-        await axios.post('http://localhost:5001/api/notifications', { notifications }, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      }
     } catch (err) {
       console.error('Error updating task status:', err.response?.data?.message || err.message);
       setError(`Failed to update task status: ${err.response?.data?.message || err.message}. Reverting changes.`);
