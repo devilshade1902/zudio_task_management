@@ -9,6 +9,8 @@ const LoginSignup = () => {
   const [isActive, setIsActive] = useState(false);
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [signupData, setSignupData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const [totp, setTotp] = useState('');
+  const [showTotpModal, setShowTotpModal] = useState(false);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -32,12 +34,44 @@ const LoginSignup = () => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+    console.log('Submitting login with:', loginData);
     try {
       const res = await axios.post('http://localhost:5001/api/users/login', loginData);
+      console.log('Login response:', res.data);
+      if (res.data.requires2FA) {
+        console.log('2FA required, showing TOTP modal');
+        setShowTotpModal(true);
+      } else {
+        localStorage.setItem('token', res.data.token);
+        console.log('Token stored, navigating to /dashboard');
+        navigate('/dashboard');
+      }
+    } catch (err) {
+      console.error('Login error:', err.response?.data || err.message);
+      setError(err.response?.data?.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTotpVerification = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    console.log('Verifying TOTP with:', { email: loginData.email, token: totp });
+    try {
+      const res = await axios.post('http://localhost:5001/api/users/verify-totp-login', {
+        email: loginData.email,
+        token: totp,
+      });
+      console.log('TOTP verification response:', res.data);
       localStorage.setItem('token', res.data.token);
+      setShowTotpModal(false);
+      setTotp('');
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      console.error('TOTP verification error:', err.response?.data || err.message);
+      setError(err.response?.data?.message || 'Invalid 2FA code');
     } finally {
       setIsLoading(false);
     }
@@ -51,16 +85,20 @@ const LoginSignup = () => {
       return;
     }
     setIsLoading(true);
+    console.log('Submitting signup with:', signupData);
     try {
       const res = await axios.post('http://localhost:5001/api/users/signup', {
         name: signupData.name,
         email: signupData.email,
         password: signupData.password,
       });
+      console.log('Signup response:', res.data);
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
       setIsActive(false);
+      navigate('/dashboard');
     } catch (err) {
+      console.error('Signup error:', err.response?.data || err.message);
       setError(err.response?.data?.message || 'Signup failed');
     } finally {
       setIsLoading(false);
@@ -68,11 +106,14 @@ const LoginSignup = () => {
   };
 
   const handleGoogleLogin = async () => {
+    console.log('Initiating Google Sign-In');
     try {
       const result = await signInWithPopup(auth, provider);
+      console.log('Google Sign-In result:', result.user);
       localStorage.setItem('token', result.user.accessToken);
       navigate('/dashboard');
     } catch (err) {
+      console.error('Google Sign-In error:', err.message);
       setError('Google Sign-In failed.');
     }
   };
@@ -85,6 +126,8 @@ const LoginSignup = () => {
   const handleLoginClick = () => {
     setIsActive(false);
     setError(null);
+    setShowTotpModal(false);
+    setTotp('');
   };
 
   return (
@@ -222,6 +265,43 @@ const LoginSignup = () => {
             </button>
           </div>
         </div>
+
+        {/* TOTP Modal */}
+        {showTotpModal && (
+          <div className="totp-modal-overlay">
+            <div className="totp-modal">
+              <h1>Enter 2FA Code</h1>
+              <form onSubmit={handleTotpVerification}>
+                <div className="input-box">
+                  <input
+                    type="text"
+                    value={totp}
+                    onChange={(e) => setTotp(e.target.value)}
+                    placeholder="6-digit code"
+                    required
+                  />
+                  <i className="bx bxs-key"></i>
+                </div>
+                <div className="totp-modal-buttons">
+                  <button type="submit" className="btn" disabled={isLoading}>
+                    {isLoading ? 'Verifying...' : 'Verify'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn cancel-btn"
+                    onClick={() => {
+                      setShowTotpModal(false);
+                      setTotp('');
+                      setError(null);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Error Display */}
         {error && (

@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const { Server } = require('socket.io');
 const http = require('http');
+const path = require('path');
 const User = require('./models/User');
 const Notification = require('./models/Notification');
 const tasksRouter = require('./routes/tasks');
@@ -35,6 +36,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+app.use('/Uploads', express.static(path.join(__dirname, 'Uploads'))); // Serve Uploads folder
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI, {
@@ -51,7 +53,6 @@ io.on('connection', (socket) => {
   socket.on('join', (username) => {
     if (username && username !== 'Guest') {
       const room = username.trim().toLowerCase();
-      // Leave all previous rooms except default socket.id
       const currentRooms = Array.from(socket.rooms).filter(r => r !== socket.id);
       currentRooms.forEach(r => socket.leave(r));
       socket.join(room);
@@ -60,7 +61,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('joinRoom', async ({ room, username }) => {
-    const taskId = room.split('-')[1]; // assuming room = task-<taskId>
+    const taskId = room.split('-')[1];
 
     try {
       const task = await Task.findById(taskId);
@@ -75,7 +76,6 @@ io.on('connection', (socket) => {
         return;
       }
 
-      // Add user to room
       if (!chatRooms[room]) chatRooms[room] = [];
       chatRooms[room].push({ id: socket.id, username });
       socket.join(room);
@@ -132,10 +132,9 @@ app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/chat', chatRouter);
 app.use('/meetings', meetingRoutes);
-app.use('/api', meetingRoutes); // Keep for backward compatibility, but prefer /meetings
+app.use('/api', meetingRoutes);
 
 // Start Task Notification and Cleanup Cron Jobs
-// Temporarily disabled to rule out cron job interference
 // scheduleTaskNotifications(io);
 scheduleNotificationCleanup();
 

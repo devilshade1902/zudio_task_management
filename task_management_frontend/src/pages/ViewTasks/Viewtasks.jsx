@@ -5,6 +5,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { jwtDecode } from 'jwt-decode';
 import "./ViewTasks.css";
 import Select from 'react-select';
+import socket from "../../socket";
 
 const ViewTasks = () => {
   const [tasks, setTasks] = useState({
@@ -81,6 +82,20 @@ const ViewTasks = () => {
       setLoading(false);
     };
     loadData();
+
+    socket.on('nameChanged', ({ oldName, newName }) => {
+      console.log(`Received name change: ${oldName} -> ${newName}`);
+      // Re-fetch tasks to reflect updated assignedUsers
+      fetchTasks();
+      // Update users list if admin
+      if (isAdmin) {
+        fetchUsers();
+      }
+    });
+
+    return () => {
+      socket.off('nameChanged');
+    };
   }, [isAdmin]);
 
   const handleDelete = async (taskId, status) => {

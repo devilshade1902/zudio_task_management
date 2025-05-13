@@ -116,6 +116,11 @@
     font-weight: 600;
 }
 
+.login-signup-wrapper .btn:disabled {
+    background: #999;
+    cursor: not-allowed;
+}
+
 .login-signup-wrapper .container p {
     font-size: 14.5px;
     margin: 15px 0;
@@ -143,7 +148,6 @@
     border-color: #fff;
     background: #eee;
 }
-
 
 .login-signup-wrapper .toggle-box {
     position: absolute;
@@ -238,18 +242,18 @@
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     text-align: center;
     width: 100%;
-    max-width: 400px; /* Matches signup-card */
+    max-width: 400px;
 }
 
 .error-popup h3 {
     margin-bottom: 10px;
     font-weight: bold;
-    color: #dc3545; /* Red for error, contrasts with #0c056d */
+    color: #dc3545;
     font-size: 1.2rem;
 }
 
 .error-popup p {
-    color: #6c757d; /* Matches switch-page text */
+    color: #6c757d;
     font-size: 0.9rem;
     margin-bottom: 15px;
 }
@@ -267,9 +271,63 @@
 }
 
 .error-popup .close-btn:hover {
-    background: #c82333; /* Darker red on hover */
+    background: #c82333;
 }
-  
+
+/* TOTP Modal Styles */
+.totp-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.totp-modal {
+    background: #fff;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    width: 100%;
+    max-width: 400px;
+}
+
+.totp-modal h1 {
+    font-size: 28px;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.totp-modal form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.totp-modal .input-box {
+    width: 100%;
+}
+
+.totp-modal-buttons {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.totp-modal .btn.cancel-btn {
+    background: #6c757d;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.totp-modal .btn.cancel-btn:hover {
+    background: #5a6268;
+}
 
 @media screen and (max-width: 650px) {
     .login-signup-wrapper .container {
@@ -322,6 +380,10 @@
     .login-signup-wrapper .container.active .toggle-panel.toggle-right {
         bottom: 0;
     }
+
+    .totp-modal {
+        padding: 20px;
+    }
 }
 
 @media screen and (max-width: 400px) {
@@ -331,5 +393,9 @@
 
     .login-signup-wrapper .toggle-panel h1 {
         font-size: 30px;
+    }
+
+    .totp-modal h1 {
+        font-size: 24px;
     }
 }
