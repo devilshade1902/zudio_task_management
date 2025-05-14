@@ -10,7 +10,8 @@ const taskSchema = new mongoose.Schema({
   employeesAssigned: { type: Number, default: 0 },
   document: { type: String },
   category: { type: String, default: '' },
-  chatRoomId: { type: String, unique: true }, 
+  chatRoomId: { type: String, unique: true },
+  deletedAt: { type: Date, default: null, },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Task', taskSchema);

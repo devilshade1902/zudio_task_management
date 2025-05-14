@@ -7,6 +7,7 @@ const http = require('http');
 const path = require('path');
 const User = require('./models/User');
 const Notification = require('./models/Notification');
+const Task = require('./models/Task');
 const tasksRouter = require('./routes/tasks');
 const chatRouter = require('./routes/chat');
 const userRoutes = require('./routes/users');
@@ -36,7 +37,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
-app.use('/Uploads', express.static(path.join(__dirname, 'Uploads'))); // Serve Uploads folder
+app.use('/Uploads', express.static(path.join(__dirname, 'Uploads')));
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI, {
@@ -64,10 +65,10 @@ io.on('connection', (socket) => {
     const taskId = room.split('-')[1];
 
     try {
-      const task = await Task.findById(taskId);
+      const task = await Task.findOne({ _id: taskId, deletedAt: null });
 
       if (!task) {
-        socket.emit('roomDenied', { message: 'Task not found.' });
+        socket.emit('roomDenied', { message: 'Task not found or is in trash.' });
         return;
       }
 
@@ -123,8 +124,9 @@ app.delete('/delete-room/:room', (req, res) => {
   }
 });
 
-// Make io accessible to routes
+// Make io and chatRooms accessible to routes
 app.set('io', io);
+app.set('chatRooms', chatRooms);
 
 // Routes
 app.use('/api/tasks', tasksRouter);

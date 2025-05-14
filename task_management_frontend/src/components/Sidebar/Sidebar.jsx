@@ -8,7 +8,6 @@ const Sidebar = ({ isOpen, toggle }) => {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    // Check if user is admin
     const token = localStorage.getItem('token');
     if (token) {
       try {
@@ -80,6 +79,15 @@ const Sidebar = ({ isOpen, toggle }) => {
           >
             <li className="text-wrap">Chat</li>
           </NavLink>
+          {isAdmin && (
+            <NavLink
+              to="/dashboard/trash"
+              className={({ isActive }) => (isActive ? "active" : "")}
+              style={{ textDecoration: 'none', color: 'white' }}
+            >
+              <li className="text-wrap">Trash Bin</li>
+            </NavLink>
+          )}
         </ul>
       </div>
     </div>
