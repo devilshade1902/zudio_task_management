@@ -18,10 +18,10 @@ const transporter = nodemailer.createTransport(
   })
 );
 
-// Get all tasks with aggregated stats
+// Get all tasks with aggregated stats (exclude trashed tasks)
 router.get('/', async (req, res) => {
   try {
-    const tasks = await Task.find();
+    const tasks = await Task.find({ deletedAt: null });
     const today = new Date();
     const totalTasks = tasks.length;
     const completedTasks = tasks.filter(task => task.status === 'Completed').length;
@@ -53,6 +53,17 @@ router.get('/', async (req, res) => {
   } catch (err) {
     console.error('Error fetching tasks:', err.message);
     res.status(500).json({ message: err.message });
+  }
+});
+
+// Get trashed tasks (admin-only)
+router.get('/trash', auth, restrictTo('Admin'), async (req, res) => {
+  try {
+    const trashedTasks = await Task.find({ deletedAt: { $ne: null } });
+    res.json({ tasks: trashedTasks });
+  } catch (err) {
+    console.error('Error fetching trashed tasks:', err.message);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -175,13 +186,17 @@ router.post('/', auth, restrictTo('Admin'), async (req, res) => {
   }
 });
 
-// Delete a task (admin-only)
+// Delete a task (admin-only, soft delete)
 router.delete('/:id', auth, restrictTo('Admin'), async (req, res) => {
   try {
     const task = await Task.findById(req.params.id);
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
+
+    // Mark task as deleted
+    task.deletedAt = new Date();
+    await task.save();
 
     const normalizedRoom = `task-${task._id}`;
     const chatRooms = req.app.get('chatRooms') || {};
@@ -199,8 +214,8 @@ router.delete('/:id', auth, restrictTo('Admin'), async (req, res) => {
     const uniqueUsers = new Set([...task.assignedUsers, ...adminUsers]);
     const notifications = Array.from(uniqueUsers).map(user => ({
       user,
-      message: `Task "${task.title}" has been deleted`,
-      type: 'DELETED_TASK',
+      message: `Task "${task.title}" has been moved to trash`,
+      type: 'TRASHED_TASK',
       taskId: task._id,
       isRead: true,
     }));
@@ -208,7 +223,7 @@ router.delete('/:id', auth, restrictTo('Admin'), async (req, res) => {
     const savedNotifications = await Notification.insertMany(notifications, { ordered: false });
     const io = req.app.get('io');
     savedNotifications.forEach(notification => {
-      console.log(`Emitting DELETED_TASK notification to room: ${notification.user} for task ${task._id}`, notification);
+      console.log(`Emitting TRASHED_TASK notification to room: ${notification.user} for task ${task._id}`, notification);
       io.to(notification.user).emit('newNotification', notification);
     });
 
@@ -219,21 +234,21 @@ router.delete('/:id', auth, restrictTo('Admin'), async (req, res) => {
         const mailOptions = {
           to: user.email,
           from: process.env.SENDGRID_FROM_EMAIL || 'dhruvsawant1811@gmail.com',
-          subject: `Task Deleted: ${task.title}`,
+          subject: `Task Moved to Trash: ${task.title}`,
           html: `
-            <h2>Task Deleted</h2>
+            <h2>Task Moved to Trash</h2>
             <p>Dear ${user.name},</p>
-            <p>The following task has been deleted:</p>
+            <p>The following task has been moved to the trash:</p>
             <ul>
               <li><strong>Title:</strong> ${task.title}</li>
               <li><strong>Description:</strong> ${task.description || 'No description'}</li>
             </ul>
-            <p>No further action is required.</p>
+            <p>No further action is required unless restored by an admin.</p>
             <p>Best regards,<br>Task Management Team</p>
           `,
         };
         return transporter.sendMail(mailOptions).catch(err => {
-          console.error(`Failed to send email to ${user.email} for deleted task ${task._id}:`, err.message);
+          console.error(`Failed to send email to ${user.email} for trashed task ${task._id}:`, err.message);
         });
       });
       await Promise.all(emailPromises);
@@ -242,14 +257,139 @@ router.delete('/:id', auth, restrictTo('Admin'), async (req, res) => {
     // Log activity
     await new Activity({
       userId: req.user.id,
-      action: `Deleted task "${task.title}"`,
+      action: `Moved task "${task.title}" to trash`,
     }).save();
 
-    await Notification.deleteMany({ taskId: task._id, type: { $ne: 'DELETED_TASK' } });
-    await task.deleteOne();
-    res.json({ message: 'Task deleted' });
+    await Notification.deleteMany({ taskId: task._id, type: { $ne: 'TRASHED_TASK' } });
+    res.json({ message: 'Task moved to trash' });
   } catch (err) {
-    console.error('Error deleting task:', err.message);
+    console.error('Error moving task to trash:', err.message);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Restore a task from trash (admin-only)
+router.put('/trash/:id/restore', auth, restrictTo('Admin'), async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    if (!task || !task.deletedAt) {
+      return res.status(404).json({ message: 'Task not found in trash' });
+    }
+
+    // Restore task
+    task.deletedAt = null;
+    const restoredTask = await task.save();
+
+    // Log activity
+    await new Activity({
+      userId: req.user.id,
+      action: `Restored task "${task.title}" from trash`,
+    }).save();
+
+    // Create in-app notifications
+    const admins = await User.find({ role: 'Admin' });
+    const adminUsers = admins.map(admin => admin.name.toLowerCase());
+    const uniqueUsers = new Set([...task.assignedUsers, ...adminUsers]);
+    const notifications = Array.from(uniqueUsers).map(user => ({
+      user,
+      message: `Task "${task.title}" has been restored`,
+      type: 'RESTORED_TASK',
+      taskId: task._id,
+    }));
+
+    const savedNotifications = await Notification.insertMany(notifications, { ordered: false });
+    const io = req.app.get('io');
+    savedNotifications.forEach(notification => {
+      console.log(`Emitting RESTORED_TASK notification to room: ${notification.user} for task ${task._id}`, notification);
+      io.to(notification.user).emit('newNotification', notification);
+    });
+
+    // Send email notifications to assigned users
+    if (task.assignedUsers.length > 0) {
+      const assignedUserDocs = await User.find({ name: { $in: task.assignedUsers } }).select('email name');
+      const dueDate = task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'Not set';
+      const emailPromises = assignedUserDocs.map(user => {
+        const mailOptions = {
+          to: user.email,
+          from: process.env.SENDGRID_FROM_EMAIL || 'dhruvsawant1811@gmail.com',
+          subject: `Task Restored: ${task.title}`,
+          html: `
+            <h2>Task Restored</h2>
+            <p>Dear ${user.name},</p>
+            <p>The following task has been restored from the trash:</p>
+            <ul>
+              <li><strong>Title:</strong> ${task.title}</li>
+              <li><strong>Description:</strong> ${task.description || 'No description'}</li>
+              <li><strong>Priority:</strong> ${task.priority}</li>
+              <li><strong>Due Date:</strong> ${dueDate}</li>
+              <li><strong>Status:</strong> ${task.status}</li>
+            </ul>
+            <p>Please log in to the Task Management system to view details.</p>
+            <p>Best regards,<br>Task Management Team</p>
+          `,
+        };
+        return transporter.sendMail(mailOptions).catch(err => {
+          console.error(`Failed to send email to ${user.email} for restored task ${task._id}:`, err.message);
+        });
+      });
+      await Promise.all(emailPromises);
+    }
+
+    // Reinitialize chat room if task is Pending or In Progress
+    if (['Pending', 'In Progress'].includes(task.status)) {
+      const chatRooms = req.app.get('chatRooms') || {};
+      const normalizedRoom = `task-${task._id}`;
+      if (!chatRooms[normalizedRoom]) {
+        chatRooms[normalizedRoom] = [];
+        console.log(`Reinitialized chat room: ${normalizedRoom}`);
+      }
+    }
+
+    res.json(restoredTask);
+  } catch (err) {
+    console.error('Error restoring task:', err.message);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Permanently delete a task from trash (admin-only)
+router.delete('/trash/:id', auth, restrictTo('Admin'), async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    if (!task || !task.deletedAt) {
+      return res.status(404).json({ message: 'Task not found in trash' });
+    }
+
+    // Permanently delete task
+    await task.deleteOne();
+
+    // Log activity
+    await new Activity({
+      userId: req.user.id,
+      action: `Permanently deleted task "${task.title}" from trash`,
+    }).save();
+
+    // Create in-app notifications for admins
+    const admins = await User.find({ role: 'Admin' });
+    const adminUsers = admins.map(admin => admin.name.toLowerCase());
+    const notifications = adminUsers.map(user => ({
+      user,
+      message: `Task "${task.title}" has been permanently deleted`,
+      type: 'PERMANENTLY_DELETED_TASK',
+      taskId: task._id,
+      isRead: true,
+    }));
+
+    const savedNotifications = await Notification.insertMany(notifications, { ordered: false });
+    const io = req.app.get('io');
+    savedNotifications.forEach(notification => {
+      console.log(`Emitting PERMANENTLY_DELETED_TASK notification to room: ${notification.user} for task ${task._id}`, notification);
+      io.to(notification.user).emit('newNotification', notification);
+    });
+
+    res.json({ message: 'Task permanently deleted' });
+  } catch (err) {
+    console.error('Error permanently deleting task:', err.message);
     res.status(500).json({ message: err.message });
   }
 });
@@ -257,9 +397,9 @@ router.delete('/:id', auth, restrictTo('Admin'), async (req, res) => {
 // Update a task (admin or assigned user for status only)
 router.put('/:id', auth, async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id);
+    const task = await Task.findOne({ _id: req.params.id, deletedAt: null });
     if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
+      return res.status(404).json({ message: 'Task not found or is in trash' });
     }
 
     const isAdmin = req.user.role === 'Admin';
@@ -429,14 +569,14 @@ router.put('/:id', auth, async (req, res) => {
   }
 });
 
-// Get tasks by assigned user
+// Get tasks by assigned user (exclude trashed tasks)
 router.get('/mytasks', async (req, res) => {
   try {
     const { name } = req.query;
     if (!name) {
       return res.status(400).json({ message: 'Name query parameter is required' });
     }
-    const tasks = await Task.find({ assignedUsers: name.toLowerCase() });
+    const tasks = await Task.find({ assignedUsers: name.toLowerCase(), deletedAt: null });
     res.json({ tasks });
   } catch (err) {
     console.error('Error fetching my tasks:', err.message);
@@ -447,9 +587,9 @@ router.get('/mytasks', async (req, res) => {
 // Mark a task as completed
 router.put('/mytasks/:id/complete', auth, async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id);
+    const task = await Task.findOne({ _id: req.params.id, deletedAt: null });
     if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
+      return res.status(404).json({ message: 'Task not found or is in trash' });
     }
     if (!task.assignedUsers.includes(req.user.name.toLowerCase())) {
       return res.status(403).json({ message: 'Not authorized to complete this task' });

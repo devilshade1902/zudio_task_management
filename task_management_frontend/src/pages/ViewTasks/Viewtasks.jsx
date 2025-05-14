@@ -85,9 +85,7 @@ const ViewTasks = () => {
 
     socket.on('nameChanged', ({ oldName, newName }) => {
       console.log(`Received name change: ${oldName} -> ${newName}`);
-      // Re-fetch tasks to reflect updated assignedUsers
       fetchTasks();
-      // Update users list if admin
       if (isAdmin) {
         fetchUsers();
       }
@@ -99,7 +97,7 @@ const ViewTasks = () => {
   }, [isAdmin]);
 
   const handleDelete = async (taskId, status) => {
-    if (window.confirm("Are you sure you want to delete this task?")) {
+    if (window.confirm("Are you sure you want to move this task to the trash bin?")) {
       try {
         const token = localStorage.getItem('token');
         await axios.delete(`http://localhost:5001/api/tasks/${taskId}`, {
@@ -110,8 +108,8 @@ const ViewTasks = () => {
           [status]: prev[status].filter(task => task._id !== taskId)
         }));
       } catch (err) {
-        console.error('Error deleting task:', err.response?.data?.message || err.message);
-        setError('Failed to delete task. Please try again.');
+        console.error('Error moving task to trash:', err.response?.data?.message || err.message);
+        setError('Failed to move task to trash. Please try again.');
       }
     }
   };
@@ -234,13 +232,12 @@ const ViewTasks = () => {
     } catch (err) {
       console.error('Error updating task status:', err.response?.data?.message || err.message);
       setError(`Failed to update task status: ${err.response?.data?.message || err.message}. Reverting changes.`);
-      // Revert optimistic update
       setTasks(prev => ({
         ...prev,
         [source.droppableId]: [...prev[source.droppableId], movedTask],
         [destination.droppableId]: prev[destination.droppableId].filter(task => task._id !== movedTask._id)
       }));
-      setTimeout(() => setError(null), 5000); // Clear error after 5s
+      setTimeout(() => setError(null), 5000);
     }
   };
 
