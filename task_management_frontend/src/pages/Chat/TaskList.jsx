@@ -88,7 +88,7 @@ function TaskList() {
   return (
     <div className="task-list">
       <header className="task-list-header">
-        <h1>Task List</h1>
+        <h1>Chat Rooms</h1>
       </header>
       <div className="task-list-content">
         {tasks.length === 0 ? (

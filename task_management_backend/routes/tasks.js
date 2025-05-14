@@ -6,6 +6,17 @@ const Notification = require('../models/Notification');
 const Message = require('../models/Message');
 const Activity = require('../models/Activity');
 const { auth, restrictTo } = require('../middleware/auth');
+const nodemailer = require('nodemailer');
+const sendgridTransport = require('nodemailer-sendgrid-transport');
+
+// Email transporter setup (SendGrid)
+const transporter = nodemailer.createTransport(
+  sendgridTransport({
+    auth: {
+      api_key: process.env.SENDGRID_API_KEY,
+    },
+  })
+);
 
 // Get all tasks with aggregated stats
 router.get('/', async (req, res) => {
@@ -87,6 +98,7 @@ router.post('/', auth, restrictTo('Admin'), async (req, res) => {
       }
     }
 
+    // Create in-app notifications
     const admins = await User.find({ role: 'Admin' });
     const adminUsers = admins.map(admin => admin.name.toLowerCase());
     const uniqueUsers = new Set([...normalizedUsers, ...adminUsers]);
@@ -105,6 +117,38 @@ router.post('/', auth, restrictTo('Admin'), async (req, res) => {
       io.to(notification.user).emit('newNotification', notification);
     });
 
+    // Send email notifications to assigned users
+    if (normalizedUsers.length > 0) {
+      const assignedUserDocs = await User.find({ name: { $in: normalizedUsers } }).select('email name');
+      const dueDate = newTask.dueDate ? new Date(newTask.dueDate).toLocaleDateString() : 'Not set';
+      const emailPromises = assignedUserDocs.map(user => {
+        const mailOptions = {
+          to: user.email,
+          from: process.env.SENDGRID_FROM_EMAIL || 'dhruvsawant1811@gmail.com',
+          subject: `New Task Assigned: ${newTask.title}`,
+          html: `
+            <h2>New Task Assigned</h2>
+            <p>Dear ${user.name},</p>
+            <p>You have been assigned a new task:</p>
+            <ul>
+              <li><strong>Title:</strong> ${newTask.title}</li>
+              <li><strong>Description:</strong> ${newTask.description || 'No description'}</li>
+              <li><strong>Priority:</strong> ${newTask.priority}</li>
+              <li><strong>Due Date:</strong> ${dueDate}</li>
+              <li><strong>Status:</strong> ${newTask.status}</li>
+            </ul>
+            <p>Please log in to the Task Management system to view details and take action.</p>
+            <p>Best regards,<br>Task Management Team</p>
+          `,
+        };
+        return transporter.sendMail(mailOptions).catch(err => {
+          console.error(`Failed to send email to ${user.email} for task ${newTask._id}:`, err.message);
+        });
+      });
+      await Promise.all(emailPromises);
+    }
+
+    // Handle overdue notifications
     if (task.dueDate) {
       const dueDate = new Date(task.dueDate);
       const now = new Date();
@@ -149,6 +193,7 @@ router.delete('/:id', auth, restrictTo('Admin'), async (req, res) => {
     }
     await Message.deleteMany({ roomId: task._id });
 
+    // Create in-app notifications
     const admins = await User.find({ role: 'Admin' });
     const adminUsers = admins.map(admin => admin.name.toLowerCase());
     const uniqueUsers = new Set([...task.assignedUsers, ...adminUsers]);
@@ -166,6 +211,33 @@ router.delete('/:id', auth, restrictTo('Admin'), async (req, res) => {
       console.log(`Emitting DELETED_TASK notification to room: ${notification.user} for task ${task._id}`, notification);
       io.to(notification.user).emit('newNotification', notification);
     });
+
+    // Send email notifications to assigned users
+    if (task.assignedUsers.length > 0) {
+      const assignedUserDocs = await User.find({ name: { $in: task.assignedUsers } }).select('email name');
+      const emailPromises = assignedUserDocs.map(user => {
+        const mailOptions = {
+          to: user.email,
+          from: process.env.SENDGRID_FROM_EMAIL || 'dhruvsawant1811@gmail.com',
+          subject: `Task Deleted: ${task.title}`,
+          html: `
+            <h2>Task Deleted</h2>
+            <p>Dear ${user.name},</p>
+            <p>The following task has been deleted:</p>
+            <ul>
+              <li><strong>Title:</strong> ${task.title}</li>
+              <li><strong>Description:</strong> ${task.description || 'No description'}</li>
+            </ul>
+            <p>No further action is required.</p>
+            <p>Best regards,<br>Task Management Team</p>
+          `,
+        };
+        return transporter.sendMail(mailOptions).catch(err => {
+          console.error(`Failed to send email to ${user.email} for deleted task ${task._id}:`, err.message);
+        });
+      });
+      await Promise.all(emailPromises);
+    }
 
     // Log activity
     await new Activity({
@@ -289,6 +361,37 @@ router.put('/:id', auth, async (req, res) => {
       }));
     }
 
+    // Send email notifications for admin updates
+    if (isAdmin && task.assignedUsers.length > 0) {
+      const assignedUserDocs = await User.find({ name: { $in: task.assignedUsers } }).select('email name');
+      const dueDate = updatedTask.dueDate ? new Date(updatedTask.dueDate).toLocaleDateString() : 'Not set';
+      const emailPromises = assignedUserDocs.map(user => {
+        const mailOptions = {
+          to: user.email,
+          from: process.env.SENDGRID_FROM_EMAIL || 'dhruvsawant1811@gmail.com',
+          subject: `Task Updated: ${updatedTask.title}`,
+          html: `
+            <h2>Task Updated</h2>
+            <p>Dear ${user.name},</p>
+            <p>The following task has been updated:</p>
+            <ul>
+              <li><strong>Title:</strong> ${updatedTask.title}</li>
+              <li><strong>Description:</strong> ${updatedTask.description || 'No description'}</li>
+              <li><strong>Priority:</strong> ${updatedTask.priority}</li>
+              <li><strong>Due Date:</strong> ${dueDate}</li>
+              <li><strong>Status:</strong> ${updatedTask.status}</li>
+            </ul>
+            <p>Please log in to the Task Management system to view the updated details.</p>
+            <p>Best regards,<br>Task Management Team</p>
+          `,
+        };
+        return transporter.sendMail(mailOptions).catch(err => {
+          console.error(`Failed to send email to ${user.email} for updated task ${updatedTask._id}:`, err.message);
+        });
+      });
+      await Promise.all(emailPromises);
+    }
+
     if (notifications.length > 0) {
       const savedNotifications = await Notification.insertMany(notifications, { ordered: false });
       savedNotifications.forEach(notification => {
@@ -370,6 +473,7 @@ router.put('/mytasks/:id/complete', auth, async (req, res) => {
     }
     await Message.deleteMany({ roomId: task._id });
 
+    // Create in-app notifications
     const admins = await User.find({ role: 'Admin' });
     const adminUsers = admins.map(admin => admin.name.toLowerCase());
     const uniqueUsers = new Set([...task.assignedUsers, ...adminUsers]);
@@ -386,6 +490,37 @@ router.put('/mytasks/:id/complete', auth, async (req, res) => {
       console.log(`Emitting COMPLETED notification to room: ${notification.user} for task ${task._id}`, notification);
       io.to(notification.user).emit('newNotification', notification);
     });
+
+    // Send email notifications to admins
+    if (adminUsers.length > 0) {
+      const adminDocs = await User.find({ name: { $in: adminUsers } }).select('email name');
+      const dueDate = task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'Not set';
+      const emailPromises = adminDocs.map(admin => {
+        const mailOptions = {
+          to: admin.email,
+          from: process.env.SENDGRID_FROM_EMAIL || 'dhruvsawant1811@gmail.com',
+          subject: `Task Completed: ${task.title}`,
+          html: `
+            <h2>Task Completed</h2>
+            <p>Dear ${admin.name},</p>
+            <p>The following task has been marked as completed:</p>
+            <ul>
+              <li><strong>Title:</strong> ${task.title}</li>
+              <li><strong>Description:</strong> ${task.description || 'No description'}</li>
+              <li><strong>Priority:</strong> ${task.priority}</li>
+              <li><strong>Due Date:</strong> ${dueDate}</li>
+              <li><strong>Assigned Users:</strong> ${task.assignedUsers.join(', ') || 'None'}</li>
+            </ul>
+            <p>Please log in to the Task Management system to review.</p>
+            <p>Best regards,<br>Task Management Team</p>
+          `,
+        };
+        return transporter.sendMail(mailOptions).catch(err => {
+          console.error(`Failed to send email to ${admin.email} for completed task ${task._id}:`, err.message);
+        });
+      });
+      await Promise.all(emailPromises);
+    }
 
     await Notification.deleteMany({ taskId: task._id, type: 'OVERDUE' });
 

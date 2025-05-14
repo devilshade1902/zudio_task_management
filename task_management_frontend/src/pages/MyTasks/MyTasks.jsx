@@ -9,6 +9,7 @@ const MyTasks = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [name, setName] = useState("");
+  const [successMessage, setSuccessMessage] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -47,7 +48,7 @@ const MyTasks = () => {
     }
   }, [name]);
 
-  const handleMarkAsCompleted = async (taskId) => {
+  const handleMarkAsCompleted = async (taskId, taskTitle) => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.put(`http://localhost:5001/api/tasks/mytasks/${taskId}/complete`, {}, {
@@ -57,6 +58,8 @@ const MyTasks = () => {
         setTasks(tasks.map(task =>
           task._id === taskId ? { ...task, status: "Completed" } : task
         ));
+        setSuccessMessage(`Task "${taskTitle}" marked as completed. Admins have been notified.`);
+        setTimeout(() => setSuccessMessage(null), 5000); // Clear message after 5 seconds
       } else {
         throw new Error("Unexpected response status");
       }
@@ -90,6 +93,11 @@ const MyTasks = () => {
   return (
     <div className="mytasks-container">
       <h2>My Tasks</h2>
+      {successMessage && (
+        <div className="mytasks-success-message">
+          {successMessage}
+        </div>
+      )}
       <div className="mytasks-list">
         {tasks.length === 0 ? (
           <p className="mytasks-no-tasks">No tasks assigned to you.</p>
@@ -114,7 +122,7 @@ const MyTasks = () => {
               {task.status !== "Completed" && (
                 <button
                   className="mytasks-complete-btn"
-                  onClick={() => handleMarkAsCompleted(task._id)}
+                  onClick={() => handleMarkAsCompleted(task._id, task.title)}
                 >
                   <FaCheck /> Mark as Completed
                 </button>
