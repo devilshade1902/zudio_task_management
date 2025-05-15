@@ -135,7 +135,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/chat', chatRouter);
 app.use('/meetings', meetingRoutes);
-app.use('/reports',reportRouter)
+app.use('/api/reports',reportRouter)
 app.use('/api', meetingRoutes);
 
 // Start Task Notification and Cleanup Cron Jobs

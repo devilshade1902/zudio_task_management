@@ -3,6 +3,7 @@ import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { FaCheck } from "react-icons/fa";
 import "./MyTasks.css";
+import TaskReport from "../../components/TaskReport/TaskReport";
 
 const MyTasks = () => {
   const [tasks, setTasks] = useState([]);
@@ -127,6 +128,10 @@ const MyTasks = () => {
                   <FaCheck /> Mark as Completed
                 </button>
               )}
+              {/* Task Report Button */}
+              
+                <TaskReport taskId={task._id} />
+               
             </div>
           ))
         )}
