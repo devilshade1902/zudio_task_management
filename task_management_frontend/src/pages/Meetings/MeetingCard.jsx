@@ -203,8 +203,7 @@ const MeetingCard = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      const roomName = `${selectedMeeting.title}-${Date.now()}`;
+      const roomName = `${selectedMeeting.title}`;
       const participantEmails = taskUsers
         .filter(user => selectedParticipants.includes(user._id))
         .map(user => user.email);
