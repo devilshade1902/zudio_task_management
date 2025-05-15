@@ -1,11 +1,9 @@
-/* src/components/Sidebar/Sidebar.css */
-
 .sidebar {
   position: fixed;
   top: 0;
   left: -250px;
   width: 250px;
-  height: 100vh;
+  height: 100vh; /* Full viewport height */
   background: linear-gradient(135deg, #1c1f26, #292e38);
   color: white;
   padding: 30px 20px;
@@ -15,6 +13,23 @@
   flex-direction: column;
   align-items: center;
   z-index: 1050;
+  overflow-y: auto; /* Enable vertical scrolling */
+  overflow-x: hidden; /* Prevent horizontal scrolling */
+  scrollbar-width: thin; /* Firefox scrollbar styling */
+  scrollbar-color: #007bff #1c1f26; /* Scrollbar track and thumb colors */
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 8px; /* Scrollbar width */
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: #007bff; /* Scrollbar thumb color */
+  border-radius: 4px; /* Rounded edges for the thumb */
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: #1c1f26; /* Scrollbar track color */
 }
 
 .sidebar.open {
@@ -37,6 +52,7 @@
 .sidebar ul {
   list-style: none;
   padding: 0;
+  margin: 0;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -117,9 +133,25 @@
 }
 
 .sidebar-toggle.shifted {
-  left: 265px;
+  left: 265px; /* Adjusted for sidebar width */
 }
 
 .sidebar-toggle:hover {
   background: #0056b3;
+}
+
+/* Responsive Design */
+@media (max-height: 500px) {
+  .sidebar {
+    padding: 20px 15px;
+  }
+
+  .sidebar ul li {
+    font-size: 15px; /* Adjust font size for smaller screens */
+    padding: 10px 0;
+  }
+
+  .sidebar h2 {
+    font-size: 18px;
+  }
 }

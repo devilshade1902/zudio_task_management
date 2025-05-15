@@ -12,6 +12,7 @@ const tasksRouter = require('./routes/tasks');
 const chatRouter = require('./routes/chat');
 const userRoutes = require('./routes/users');
 const notificationsRouter = require('./routes/notifications');
+const reportRouter=require('./routes/report')
 const meetingRoutes = require('./routes/meetings');
 const { scheduleTaskNotifications } = require('./utils/taskNotifications');
 const { scheduleNotificationCleanup } = require('./utils/cleanupNotifications');
@@ -134,6 +135,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/chat', chatRouter);
 app.use('/meetings', meetingRoutes);
+app.use('/reports',reportRouter)
 app.use('/api', meetingRoutes);
 
 // Start Task Notification and Cleanup Cron Jobs

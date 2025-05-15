@@ -14,6 +14,7 @@ import ChatRoom from './pages/Chat/ChatRoom';
 import TaskList from './pages/Chat/TaskList';
 import MeetingRoom from "./pages/Meetings/MeetingRoom";
 import TrashBin from './components/TrashBin/TrashBin';
+import Report from './pages/report/Report';
 
 function App() {
   function ChatRoomWrapper() {
@@ -41,6 +42,7 @@ function App() {
           <Route path="meetings" element={<MeetingCard />} />
           <Route path="calendar" element={<CalendarView />} />
           <Route path="tasklist" element={<TaskList />} />
+            <Route path="report" element={<Report />} />
           <Route path="trash" element={<TrashBin />} />
         </Route>
       </Routes>
